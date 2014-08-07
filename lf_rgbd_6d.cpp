@@ -1,0 +1,504 @@
+/*
+ * lf_rgbd_6d.cpp
+ *
+ * Created on: August 6, 2014
+ *      Author: davheld
+ *
+ * Using the likelihood field model from
+ * Probabilistic Robotics, Thrun, et al, 2005.
+ * for 6D tracking with color information.
+ *
+ * Parameters are taken based on the latent surface model from RSS 2014,
+ * Held, et al.
+ */
+
+#include "lf_rgbd_6d.h"
+
+#include <utility>
+#include <vector>
+#include <algorithm>
+
+#include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
+
+using std::max;
+using std::min;
+using std::pair;
+using std::vector;
+
+namespace {
+
+// If true, we add a term to the measurement covariance based on the spacing between
+// particles.
+const bool kUse_annealing = true;
+
+// Factor to multiply the sensor resolution for our measurement model.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
+const double kSigmaFactor = getenv("SIGMA_FACTOR") ? atof(getenv("SIGMA_FACTOR")) : 0.5;
+
+// Factor to multiply the particle sampling resolution for our measurement  model.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
+const double kSigmaGridFactor = getenv("SIGMA_GRID_FACTOR") ? atof(getenv("SIGMA_GRID_FACTOR")) : 1;
+
+// The noise in our sensor which is independent of the distance to the tracked object.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// With sigma^2 = kMinMeasurementVariance^2 + other terms.
+const double kMinMeasurementVariance = getenv("MIN_MEASUREMENT_VAR") ? atof(getenv("MIN_MEASUREMENT_VAR")) : 0.03;
+
+// We add this to our Gaussian so we don't give 0 probability to points
+// that don't align.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
+const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTHING_FACTOR")) : 1;
+
+// We multiply our log measurement probability by this factor, to decrease
+// our confidence in the measurement model (e.g. to take into account
+// dependencies between neighboring points).
+const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? atof(getenv("MEASUREMENT_DISCOUNT_3D")) : 1;
+
+// Approximation factor for finding the nearest neighbor.
+// Set to 0 to find the exact nearest neighbor.
+// For a reasonable speedup, set to 2.
+const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 0;
+
+// -----Color Parameters----
+
+// Whether to use color in our measurememtn model.
+const bool kUseColor = true;
+
+// Whether to use two colors in our measurement model.
+const bool kTwoColors = false;
+
+// The parameter to use for our color Laplacian for color 1.
+const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 15;
+
+// The parameter to use for our color Laplacian for color 2.
+const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15;
+
+// How much we expect the colors to match (there might have been lens flare,
+// the lighting might have changed, etc. which would cause all the colors
+// to be completely wrong).
+const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.5;
+
+// How much to care about color as a function of the particle sampling resolution.
+// When we are sampling sparsely, we do not expect the colors to align well.
+// Set to 0 to ignore this term.
+// If non-zero, we set prob_color_match_ = kProbColorMatch *
+//    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
+const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 0;
+
+// Which color space to use for our color matches.
+// 0: Use blue and green,
+// 1: Use (R + G + B) / 3.
+const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 1;
+
+} // namespace
+
+
+LF_RGBD_6D::LF_RGBD_6D()
+    : searchTree_(false),  //  //By setting sorted to false,
+                                // the radiusSearch operations will be faster.
+      smoothing_factor_(kSmoothingFactor),
+      max_nn_(1),
+      nn_indices_(max_nn_),
+      nn_sq_dists_(max_nn_),
+      color_exp_factor1_(-1.0 / kValueSigma1),
+      color_exp_factor2_(-1.0 / kValueSigma2)
+{
+}
+
+LF_RGBD_6D::~LF_RGBD_6D() {
+  // TODO Auto-generated destructor stub
+}
+
+void LF_RGBD_6D::setPrevPoints(
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr prev_points) {
+  prev_points_ = prev_points;
+
+  // Set the input cloud for the search tree to the previous points for NN
+  // lookups.
+  searchTree_.setInputCloud(prev_points_);
+
+  // Set search tree epsilonfor a speedup.
+  searchTree_.setEpsilon(kSearchTreeEpsilon);
+}
+
+void LF_RGBD_6D::init(const double xy_sampling_resolution,
+          const double z_sampling_resolution,
+          const double sensor_horizontal_resolution,
+          const double sensor_vertical_resolution,
+          const double down_sample_factor) {
+  xy_sampling_resolution_ = xy_sampling_resolution;
+  z_sampling_resolution_ = z_sampling_resolution;
+
+  // Because of downsampling, the effective resoluton of the sensor
+  // can be different from the actual resolution.
+  const double sensor_horizontal_resolution_effective =
+      sensor_horizontal_resolution / down_sample_factor;
+  const double sensor_vertical_resolution_effective =
+      sensor_vertical_resolution / down_sample_factor;
+
+  // Compute the expected spatial variance in the x and y directions.
+  const double error1_xy =
+      kUse_annealing ? kSigmaGridFactor * xy_sampling_resolution_ : 0;
+  const double error2_xy =
+      sensor_horizontal_resolution_effective * kSigmaFactor;
+  const double sigma_xy = sqrt(pow(error1_xy, 2) + pow(error2_xy, 2) +
+                               pow(kMinMeasurementVariance, 2));
+
+  const double error1_z =
+      kUse_annealing ? kSigmaGridFactor * z_sampling_resolution_ : 0;
+  const double error2_z =
+      sensor_vertical_resolution_effective * kSigmaFactor;
+  const double sigma_z = sqrt(pow(error1_z, 2) + pow(error2_z, 2) +
+                              pow(kMinMeasurementVariance, 2));
+
+
+  // Convert the variance to a factor such that
+  // exp(-x^2 / 2 sigma^2) = exp(x^2 * factor)
+  // where x is the distance.
+  xy_exp_factor_ = -1.0 / (2 * pow(sigma_xy, 2));
+  z_exp_factor_ = -1.0 / (2 * pow(sigma_z, 2));
+  xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy, 2)) + pow(sigma_z, 2));
+  isotropic_ = (xy_exp_factor_ == z_exp_factor_);
+
+  // Compute the total particle sampling resolution
+  const double sampling_resolution = sqrt(pow(xy_sampling_resolution_, 2) +
+                                          pow(z_sampling_resolution_, 2));
+
+  // Set the probability of seeing a color match, which is based on the
+  // particle sampling resolution - when we are sampling sparsely, we do not
+  // expect the colors to align well.
+  if (kColorThreshFactor == 0) {
+    prob_color_match_ = kProbColorMatch;
+  } else {
+    prob_color_match_ = kProbColorMatch * exp(-pow(sampling_resolution, 2) /
+        (2 * pow(kColorThreshFactor, 2)));
+  }
+}
+
+void LF_RGBD_6D::createCandidateTransforms(
+    const double xy_step_size,
+    const double z_step_size,
+    const double roll_step_size,
+    const double pitch_step_size,
+    const double yaw_step_size,
+    std::pair <double, double>& xRange,
+    std::pair <double, double>& yRange,
+    std::pair <double, double>& zRange_orig,
+    const std::pair <double, double>& rollRange,
+    const std::pair <double, double>& pitchRange,
+    const std::pair <double, double>& yawRange,
+    std::vector<Transform6D>* transforms) {
+  printf("LF_RGBD_6D::createCandidateTransforms Not implemented yet");
+  exit(1);
+
+  // Make sure we hit 0 in our z range, in case the step is too large.
+  //const double z_step_size = fabs(zRange.first) > 0 ? min(z_step_size_orig, fabs(zRange.first)) : z_step_size_orig;
+  //printf("Initial: z Range: %lf to %lf\n", zRange_orig.first, zRange_orig.second);
+  /*std::pair<double, double> zRange;
+  if (z_step_size > fabs(zRange_orig.first)) {
+    zRange.first = 0;
+    zRange.second = 0;
+  } else {
+    zRange.first = zRange_orig.first;
+    zRange.second = zRange_orig.second;
+  }
+
+  // Compute the number of transforms along each direction.
+  const int num_x_locations = (xRange.second - xRange.first) / xy_step_size;
+  const int num_y_locations = (yRange.second - yRange.first) / xy_step_size;
+  int num_z_locations;
+  if (z_step_size == 0) {
+    num_z_locations = 1;
+  } else {
+    num_z_locations = (zRange.second - zRange.first) / z_step_size;
+  }
+
+  // Reserve space for all of the transforms.
+  transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
+
+  const double volume = pow(xy_step_size, 2) * z_step_size;
+
+  // Create a list of candidate transforms.
+  for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
+    for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
+      XYZTransform transform(x, y, 0, volume);
+      transforms->push_back(transform);
+    }
+  }*/
+
+  /*if (z_step_size == 0) {
+    // Create a list of candidate transforms.
+    for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
+      for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
+        XYZTransform transform(x, y, zRange.first, volume);
+        transforms->push_back(transform);
+      }
+    }
+  } else {
+    // Create a list of candidate transforms.
+    for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
+      for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
+        for (double z = zRange.first; z <= zRange.second; z += z_step_size){
+          XYZTransform transform(x, y, z, volume);
+          transforms->push_back(transform);
+        }
+      }
+    }
+  }*/
+
+}
+
+
+void LF_RGBD_6D::track(
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr current_points,
+    const Eigen::Vector3f& current_points_centroid,
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
+    const double sensor_horizontal_resolution,
+    const double sensor_vertical_resolution,
+    const double down_sample_factor,
+    const std::pair <double, double>& xRange,
+    const std::pair <double, double>& yRange,
+    const std::pair <double, double>& zRange,
+    const std::pair <double, double>& rollRange,
+    const std::pair <double, double>& pitchRange,
+    const std::pair <double, double>& yawRange,
+    const MotionModel& motion_model,
+    ScoredTransforms<ScoredTransform6D>* scored_transforms) {
+  // Find all candidate xyz transforms.
+  vector<Transform6D> transforms_6D;
+  // TODO - make 6D transforms.
+
+  //DensityGridTracker3d::createCandidateXYZTransforms(xy_sampling_resolution, z_sampling_resolution,
+  //    xRange, yRange, zRange, &xyz_transforms);
+
+  // Get scores for each of the xyz transforms.
+  score6DTransforms(
+        current_points, current_points_centroid,
+        xy_sampling_resolution, z_sampling_resolution,
+        sensor_horizontal_resolution, sensor_vertical_resolution,
+        down_sample_factor, transforms_6D, motion_model, scored_transforms);
+}
+
+void LF_RGBD_6D::score6DTransforms(
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
+    const Eigen::Vector3f& current_points_centroid,
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
+    const double sensor_horizontal_resolution,
+    const double sensor_vertical_resolution,
+    const double down_sample_factor,
+    const std::vector<Transform6D>& transforms,
+    const MotionModel& motion_model,
+    ScoredTransforms<ScoredTransform6D>* scored_transforms) {
+  // Initialize variables for tracking grid.
+  init(xy_sampling_resolution, z_sampling_resolution, sensor_horizontal_resolution,
+       sensor_vertical_resolution, down_sample_factor);
+
+  const size_t num_transforms = transforms.size();
+
+  // Compute scores for all of the transforms using the density grid.
+  scored_transforms->clear();
+  scored_transforms->resize(num_transforms);
+
+  for(size_t i = 0; i < num_transforms; ++i){
+    const Transform6D& transform = transforms[i];
+    const double x = transform.x;
+    const double y = transform.y;
+    const double z = transform.z;
+    const double roll = transform.roll;
+    const double pitch = transform.pitch;
+    const double yaw = transform.yaw;
+    const double volume = transform.volume;
+
+    const double log_prob = getLogProbability(
+          current_points, current_points_centroid, motion_model,
+          x, y, z, roll, pitch, yaw);
+
+    // Save the complete transform with its log probability.
+    const ScoredTransform6D scored_transform(x, y, z, roll, pitch, yaw,
+        log_prob, volume);
+    scored_transforms->set(scored_transform, i);
+  }
+}
+
+void LF_RGBD_6D::makeEigenRotation(
+    const double roll, const double pitch, const double yaw,
+    Eigen::Quaternion<float>* rotation) const {
+  Eigen::AngleAxisf roll_angle(roll, Eigen::Vector3f::UnitZ());
+  Eigen::AngleAxisf yaw_angle(yaw, Eigen::Vector3f::UnitY());
+  Eigen::AngleAxisf pitch_angle(pitch, Eigen::Vector3f::UnitX());
+
+  *rotation = roll_angle * yaw_angle * pitch_angle;
+}
+
+void LF_RGBD_6D::makeEigenTransform(
+    const Eigen::Vector3f& centroid,
+    const double delta_x, const double delta_y, const double delta_z,
+    const double roll, const double pitch, const double yaw,
+    Eigen::Affine3f* transform) const {
+  // We want to rotate the object about its own centroid (not about the
+  // camera center), so we first subtract off the centroid, then rotate,
+  // then add back the centroid.
+  const Eigen::Affine3f center_points(Eigen::Translation<float, 3>(-centroid));
+
+  //const Eigen::Matrix4f rotate_points;
+  Eigen::Quaternion<float> rotate_points;
+  makeEigenRotation(roll, pitch, yaw, &rotate_points);
+
+  const Eigen::Translation<float,3> uncenter_points(centroid);
+
+  // Now shift the points according to the translation.
+  const Eigen::Translation<float,3> translate_points(delta_x, delta_y, delta_z);
+
+  // Center, rotate, uncenter, then translate, as described above.
+  Eigen::Affine3f transformationMatrix;
+  transformationMatrix = translate_points * uncenter_points * rotate_points *
+      center_points;
+
+  // Copy from a matrix to a transform.
+  *transform = transformationMatrix;
+}
+
+double LF_RGBD_6D::getLogProbability(
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
+    const Eigen::Vector3f& current_points_centroid,
+    const MotionModel& motion_model,
+    const double delta_x,
+    const double delta_y,
+    const double delta_z,
+    const double roll,
+    const double pitch,
+    const double yaw) {
+  // Make a new cloud to store the transformed cloud for the current points.
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_current_points(
+      new pcl::PointCloud<pcl::PointXYZRGB>);
+
+  // Make the desired transform.
+  Eigen::Affine3f transform;
+  makeEigenTransform(current_points_centroid, delta_x, delta_y, delta_z, roll,
+                     pitch, yaw, &transform);
+
+  // Transform the cloud.
+  pcl::transformPointCloud(*current_points, *transformed_current_points,
+                           transform);
+
+  // Total log measurement probability.
+  double log_measurement_prob = 0;
+
+  // Iterate over every point, and look up its score in the density grid.
+  const size_t num_points = current_points->size();
+  for (size_t i = 0; i < num_points; ++i) {
+    // Extract the point so we can compute its score.
+    const pcl::PointXYZRGB& current_pt = (*transformed_current_points)[i];
+
+    // Compute the probability.
+    log_measurement_prob += get_log_prob(current_pt);
+  }
+
+  // Compute the motion model probability.
+  const double motion_model_prob = motion_model.computeScore(delta_x, delta_y,
+                                                             delta_z);
+
+  // Combine the motion model score with the (discounted) measurement score to
+  // get the final log probability.
+  const double log_prob = log(motion_model_prob) +
+      kMeasurementDiscountFactor * log_measurement_prob;
+
+  return log_prob;
+}
+
+double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
+  // Find the nearest neighbor.
+  searchTree_.nearestKSearch(current_pt, max_nn_, nn_indices_, nn_sq_dists_);
+  const pcl::PointXYZRGB& prev_pt = (*prev_points_)[nn_indices_[0]];
+
+    // Compute the log probability of this neighbor match.
+  double log_point_match_prob_i;
+  if (isotropic_) {
+    log_point_match_prob_i = nn_sq_dists_[0] * xy_exp_factor_;
+  } else {
+    // Compute the distance to the neighbor in each direction.
+    const double distance_xy_sq =
+        pow(prev_pt.x - current_pt.x, 2) + pow(prev_pt.y - current_pt.y, 2);
+    const double distance_z_sq = pow(prev_pt.z - current_pt.z, 2);
+
+    log_point_match_prob_i = distance_xy_sq * xy_exp_factor_ +
+        distance_z_sq * z_exp_factor_;
+  }
+
+  // Compute the probability of this neighbor match.
+  const double point_match_prob_spatial_i = exp(log_point_match_prob_i);
+
+  // Compute the point match probability, incorporating color if necessary.
+  double point_prob;
+  if (kUseColor) {
+    point_prob = computeColorProb(prev_pt, current_pt, point_match_prob_spatial_i);
+  } else {
+    point_prob = point_match_prob_spatial_i + smoothing_factor_;
+  }
+
+  // Compute the log.
+  const double log_point_prob = log(point_prob);
+
+  return log_point_prob;
+}
+
+double LF_RGBD_6D::computeColorProb(const pcl::PointXYZRGB& prev_pt,
+    const pcl::PointXYZRGB& pt, const double point_match_prob_spatial_i) const {
+  // Because we are using color, we have to modify the smoothing factor.
+  const double factor1 = smoothing_factor_ / (smoothing_factor_ + 1);
+  double smoothing_factor;
+  if (kUseColor && !kTwoColors) {
+    smoothing_factor = factor1 / 255;
+  } else if (kUseColor && kTwoColors) {
+    smoothing_factor = factor1 / pow(255, 2);
+  } else {
+    smoothing_factor = smoothing_factor_;
+  }
+  smoothing_factor *= (1 - point_match_prob_spatial_i);
+
+  // Find the colors of the 2 points.
+  double color1 = 0, color2 = 0, color3 = 0, color4 = 0;
+  if (kColorSpace == 0) {
+    // Blue and Green.
+    color1 = pt.b;
+    color2 = prev_pt.b;
+
+    color3 = pt.g;
+    color4 = prev_pt.g;
+  } else if (kColorSpace == 1) {
+    // Mean of RGB.
+    color1 = (pt.r + pt.g + pt.b) / 3;
+    color2 = (prev_pt.r + prev_pt.g + prev_pt.b) / 3;
+  } else {
+    printf("Unknown color space: %d\n", kColorSpace);
+    exit(1);
+  }
+
+  // Compute the probability of the match, using the spatial and color distance.
+  const double color_distance1 = fabs(color1 - color2);
+  double point_match_prob;
+  if (kTwoColors) {
+    const double color_distance2 = fabs(color3 - color4);
+
+    point_match_prob =
+        point_match_prob_spatial_i *
+        ((1-prob_color_match_) * 1.0 / pow(255, 2) +
+         prob_color_match_ * (
+           -0.5 * color_exp_factor1_ * exp(color_distance1 * color_exp_factor1_)) *
+           -0.5 * color_exp_factor2_ * exp(color_distance2 * color_exp_factor2_));
+  } else {
+    point_match_prob =
+        point_match_prob_spatial_i *
+        ((1-prob_color_match_) * 1.0 / 255 +
+         prob_color_match_ *
+         -1 * color_exp_factor1_ * exp(color_distance1 * color_exp_factor1_));
+  }
+  const double point_prob = point_match_prob + smoothing_factor;
+
+  return point_prob;
+}
