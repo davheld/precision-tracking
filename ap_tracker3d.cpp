@@ -19,31 +19,31 @@ using std::max;
 
 namespace {
 
+const bool k_NNTracking = true;
+const bool use_lf_tracker = true;
+
 const double min_transforms = getenv("MIN_TRANSFORMS") ? atoi(getenv("MIN_TRANSFORMS")) : 1;
 
 const double pi = boost::math::constants::pi<double>();
 
-const double kMinResFactor = getenv("MIN_RES_FACTOR") ? atof(getenv("MIN_RES_FACTOR")) : 2;
+const double kMinResFactor = getenv("MIN_RES_FACTOR") ? atof(getenv("MIN_RES_FACTOR")) : 1;
 
-const bool k_NNTracking = getenv("NN_TRACKING");
+const bool kSearchYaw = false;
 
-const bool kSearchYaw = getenv("SEARCH_YAW");
+const double kMaxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 1;
 
-const double kMaxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 4;
-
-const bool use_lf_tracker = getenv("USE_LF");
 
 const double kMinXYStep = getenv("MIN_XY_STEP") ? atof(getenv("MIN_XY_STEP")) : 0.05;
 
 const double kReductionFactor = getenv("REDUCTION_FACTOR") ? atof(getenv("REDUCTION_FACTOR")) : 3;
 
-const size_t kMaxNumTransformsActual = getenv("MAX_NUM_ACTUAL") ? atoi(getenv("MAX_NUM_ACTUAL")) : 5;
+const size_t kMaxNumTransformsActual = getenv("MAX_NUM_ACTUAL") ? atoi(getenv("MAX_NUM_ACTUAL")) : 0;
 
 const double kMaxNumTransformsKNN = getenv("NN_MAX_NUM_TRANSFORMS") ?
-    atoi(getenv("NN_MAX_NUM_TRANSFORMS")) : 10;
+    atoi(getenv("NN_MAX_NUM_TRANSFORMS")) : 10000;
 
 const double kMaxNumTransformsGrid = getenv("MAX_NUM_TRANSFORMS") ?
-    atoi(getenv("MAX_NUM_TRANSFORMS")) : 1000;
+    atoi(getenv("MAX_NUM_TRANSFORMS")) : 10000;
 
 } // namespace
 

@@ -34,64 +34,78 @@ using std::vector;
 
 namespace {
 
-const bool kUse_annealing = getenv("USE_ANNEALING");
+// If true, we add a term to the measurement covariance based on the spacing between
+// particles.
+const bool kUse_annealing = true;
+
+// Factor to multiply the sensor resolution for our measurement model.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
+const double kSigmaFactor = getenv("SIGMA_FACTOR") ? atof(getenv("SIGMA_FACTOR")) : 0.5;
+
+// Factor to multiply the particle sampling resolution for our measurement  model.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
+const double kSigmaGridFactor = getenv("SIGMA_GRID_FACTOR") ? atof(getenv("SIGMA_GRID_FACTOR")) : 1;
+
+// The noise in our sensor which is independent of the distance to the tracked object.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// With sigma^2 = kMinMeasurementVariance^2 + other terms.
+const double kMinMeasurementVariance = getenv("MIN_MEASUREMENT_VAR") ? atof(getenv("MIN_MEASUREMENT_VAR")) : 0.03;
+
+// We add this to our Gaussian so we don't give 0 probability to points
+// that don't align.
+// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
+const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTHING_FACTOR")) : 1;
+
+// We multiply our log measurement probability by this factor, to decrease
+// our confidence in the measurement model (e.g. to take into account
+// dependencies between neighboring points).
+const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? atof(getenv("MEASUREMENT_DISCOUNT_3D")) : 1;
+
+// Approximation factor for finding the nearest neighbor.
+// Set to 0 to find the exact nearest neighbor.
+// For a reasonable speedup, set to 2.
+const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 0;
 
 const double pi = boost::math::constants::pi<double>();
 
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma = velodyne_horizontal_res * kSigmaFactor.
-const double kSigmaFactor = getenv("SIGMA_FACTOR") ? atof(getenv("SIGMA_FACTOR")) : 1;
-
-// We multiply our log measurement probability by this factor, to decrease
-// our confidence in the probabilities (e.g. take into account
-// dependencies between neighboring points).
-const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? atof(getenv("MEASUREMENT_DISCOUNT_3D")) : 0.9;
-
-const double kSigmaGridFactor = getenv("SIGMA_GRID_FACTOR") ? atof(getenv("SIGMA_GRID_FACTOR")) : 2;
-
-const double kSmoothingFactor = getenv("SMOOTHING_FACTOR_3D") ? atof(getenv("SMOOTHING_FACTOR_3D")) : 0.1;
-
 // ------------------------
 
-const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 2;
+const bool use_lf_tracker = true;
 
-const double kReductionFactor = getenv("REDUCTION_FACTOR") ? atof(getenv("REDUCTION_FACTOR")) : 3;
+const bool kUseMotion = true;
 
-const double kMinMeasurementVariance = getenv("MIN_MEASUREMENT_VAR") ? atof(getenv("MIN_MEASUREMENT_VAR")) : 0.01;
+// -----Color Parameters----
 
+// Whether to use color in our measurement model.
+const bool kUseColor = false;
 
-// How far to spill over in the density grid (number of sigmas).
-//const double kSpilloverRadius = getenv("SPILLOVER_RADIUS") ? atof(getenv("SPILLOVER_RADIUS")) : 2.0;
+// Whether to use two colors in our measurement model.
+const bool kTwoColors = false;
 
-//const bool doNearestKSearch = getenv("NEAREST_K_SEARCH");
+// The parameter to use for our color Laplacian for color 1.
+const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 15;
 
-// The probablility that a point has no match.
-//const double kProbNoMatch = getenv("PROB_NO_MATCH") ? atof(getenv("PROB_NO_MATCH")) : 0.1;
+// The parameter to use for our color Laplacian for color 2.
+const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15;
 
-// Whether to use a Laplacian distribution, instead of a Gaussian.
-//const bool kUseLaplacian = getenv("USE_LAPLACIAN");
+// How much we expect the colors to match (there might have been lens flare,
+// the lighting might have changed, etc. which would cause all the colors
+// to be completely wrong).
+const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.5;
 
-//const int kMinSpillover = getenv("MIN_SPILLOVER") ? atoi(getenv("MIN_SPILLOVER")) : 0;
+// How much to care about color as a function of the particle sampling resolution.
+// When we are sampling sparsely, we do not expect the colors to align well.
+// Set to 0 to ignore this term.
+// If non-zero, we set prob_color_match_ = kProbColorMatch *
+//    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
+const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 0;
 
-const bool kUseClosestMotion = getenv("USE_CLOSEST_MOTION");
-
-const bool use_lf_tracker = getenv("USE_LF");
-
-const bool kUseMotion = getenv("USE_MOTION");
-
-// Color Parameters.
-const bool kUseColor = getenv("USE_COLOR");
-const bool kTwoColors = getenv("TWO_COLORS");
-
-const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 20;
-const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 20;
-
-const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 2;
-
-const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.2;
-
-// 0 = blue and green, 1 = mean of RGB.
-const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 0;
+// Which color space to use for our color matches.
+// 0: Use blue and green,
+// 1: Use (R + G + B) / 3.
+const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 1;
 
 // ------------------
 
@@ -104,8 +118,6 @@ const int kMaxXSize = use_lf_tracker ? 1000 : 1;
 const int kMaxYSize = use_lf_tracker ? 1000 : 1;
 // At a resolution of 1.2 cm, a 5 m tall object will take 500 cells.
 const int kMaxZSize = use_lf_tracker ? 500 : 1;
-
-const double kResolution = 0.01;
 
 }
 
@@ -450,9 +462,6 @@ double LFDiscrete3d::getLogProbability(
   double motion_model_prob;
   if (!kUseMotion) {
     motion_model_prob = 1;
-  } else if (kUseClosestMotion) {
-    motion_model_prob = motion_model.computeScore(x, y, z,
-        xy_grid_step_, z_grid_step_);
   } else {
     motion_model_prob = motion_model.computeScore(x, y, z);
   }

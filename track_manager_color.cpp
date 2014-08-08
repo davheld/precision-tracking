@@ -1231,6 +1231,9 @@ readCloud(std::istream& s, pcl::PointCloud<PointT> &cloud) {
   pcl::PCLPointCloud2 blob;
   int pcd_version;
   printf("Reading cloud\n");
+
+  pcl::uint8_t x;
+
   int res = readCloud(s, blob, cloud.sensor_origin_, cloud.sensor_orientation_,
                   pcd_version);
   printf("Done reading cloud\n");
@@ -1242,32 +1245,37 @@ readCloud(std::istream& s, pcl::PointCloud<PointT> &cloud) {
   return (res);
 }
 
-/*bool readCloud(std::istream& s, pcl::PCLPointCloud2 &v)
+bool readCloud(std::istream& s, pcl::PCLPointCloud2 &v)
 {
   string line;
 
-  if (!checkLine(s, "header")) return false;
+  /*if (!checkLine(s, "header")) return false;
   if (!checkLine(s, "seq")) return false;
   s >> v.header.seq;
+  getline(s, line);
+
   if (!checkLine(s, "stamp")) return false;
   s >> v.header.stamp;
+  getline(s, line);
+
   if (!checkLine(s, "frame_id")) return false;
   s >> v.header.frame_id;
+  getline(s, line);*/
 
   if (!checkLine(s, "height")) return false;
   s >> v.height;
   getline(s, line);
-  printf("Read height: %d\n", v.height);
+  //printf("Read height: %d\n", v.height);
 
   if (!checkLine(s, "width")) return false;
   s >> v.width;
-  printf("Read width: %d\n", v.width);
+  //printf("Read width: %d\n", v.width);
   getline(s, line);
 
   int num_fields;
   if (!checkLine(s, "numfields")) return false;
   s >> num_fields;
-  printf("Read numfields: %d\n", num_fields);
+  //printf("Read numfields: %d\n", num_fields);
   getline(s, line);
 
   v.fields.resize(num_fields);
@@ -1275,10 +1283,10 @@ readCloud(std::istream& s, pcl::PointCloud<PointT> &cloud) {
   if (!checkLine(s, "fields[]")) return false;
 
   for (size_t i = 0; i < num_fields; ++i) {
-    printf("Reading field %zu\n", i);
+    //printf("Reading field %zu\n", i);
     s >> v.fields[i].name;
     getline(s, line);
-    printf("Read name: %s\n", v.fields[i].name.c_str());
+    //printf("Read name: %s\n", v.fields[i].name.c_str());
 
     s >> v.fields[i].offset;
     getline(s, line);
@@ -1292,28 +1300,37 @@ readCloud(std::istream& s, pcl::PointCloud<PointT> &cloud) {
 
   if (!checkLine(s, "is_bigendian: ")) return false;
   s >> v.is_bigendian;
-  printf("Read bigendian: %d\n", v.is_bigendian);
+  //printf("Read bigendian: %d\n", v.is_bigendian);
   getline(s, line);
 
   if (!checkLine(s, "point_step: ")) return false;
   s >> v.point_step;
-  printf("Read pointstep: %d\n", v.point_step);
+  //printf("Read pointstep: %d\n", v.point_step);
   getline(s, line);
 
   if (!checkLine(s, "row_step: ")) return false;
   s >> v.row_step;
-  printf("Read row step: %d\n", v.row_step);
+  //printf("Read row step: %d\n", v.row_step);
   getline(s, line);
 
   int num_data;
   if (!checkLine(s, "numdata: ")) return false;
   s >> num_data;
-  printf("Read num data: %d\n", num_data);
+  //printf("Read num data: %d\n", num_data);
   getline(s, line);
 
   v.data.resize(num_data);
 
-  if (!checkLine(s, "data[]")) return false;
+  size_t data_size;
+  if (!checkLine(s, "datasize: ")) return false;
+  s >> data_size;
+  //printf("Read data size: %zu\n", data_size);
+  getline(s, line);
+
+  s.read((char*)&v.data[0], data_size);
+  getline(s, line);
+
+  /*if (!checkLine(s, "data[]")) return false;
   for (size_t i = 0; i < num_data; ++i)
   {
     printf("Read data %zu\n", i);
@@ -1326,21 +1343,23 @@ readCloud(std::istream& s, pcl::PointCloud<PointT> &cloud) {
     s >> data;
     getline(s, line);
     v.data[i] = data;
-  }
+  }*/
+
+
   if (!checkLine(s, "is_dense: ")) return false;
   s >> v.is_dense;
-  printf("Read is dense: %d\n", v.is_dense);
+  //printf("Read is dense: %d\n", v.is_dense);
   getline(s, line);
 
   return true;
-}*/
+}
 
 void  deserializePointCloud(std::istream& istrm,
     pcl::PointCloud<pcl::PointXYZRGB>& point_cloud) {
-  //pcl::PCLPointCloud2 msg;
-  readCloud(istrm, point_cloud);
+  pcl::PCLPointCloud2 msg;
+  readCloud(istrm, msg);
 
-  //pcl::fromPCLPointCloud2(msg, point_cloud);
+  pcl::fromPCLPointCloud2(msg, point_cloud);
 }
 
 

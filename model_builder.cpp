@@ -55,32 +55,12 @@ const bool align_to_accumulated = false;
 const double valueWeight =
 		getenv("VALUE_WEIGHT") ? atof(getenv("VALUE_WEIGHT")) : 10;
 
-const bool accumulate_all = getenv("ACCUMULATE_ALL") ? true : false;
+const bool accumulate_all = getenv("ACCUMULATE_ALL");
 
 const bool use_motion_model = true; //getenv("USE_MOTION_MODEL");
 
-const double max_time_ms =
-		getenv("MAX_TIME_MS") ? atof(getenv("MAX_TIME_MS")) : 100;
-
-const bool useRANSACalignment = getenv("USE_RANSAC");
-
 const bool useCentroid = getenv("USE_CENTROID");
 
-const bool kUseTransition = getenv("USE_TRANSITION");
-
-
-
-/*Eigen::Matrix4f dgcToEigen(const dgc_transform_t dgc_transform){
-  Eigen::Matrix4f eigen_transform;
-
-  for (int i = 0; i < 4; i++){
-    for (int j = 0; j < 4; j++){
-      eigen_transform(i,j) = dgc_transform[i][j];
-    }
-  }
-
-  return eigen_transform;
-}*/
 
 Eigen::Matrix4f makeRotationMatrix(const double& roll, const double& pitch, const double& yaw){
   Eigen::Matrix4f shift = Eigen::Matrix4f::Identity();

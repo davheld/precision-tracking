@@ -52,7 +52,7 @@ void computeErrorStatistics(const std::vector<double>& errors) {
   printf("Computing error statistics over %zu frames\n", num_frames);
 
   for (size_t i = 0; i < num_frames; ++i) {
-    sum_sq += errors[i];
+    sum_sq += pow(errors[i], 2);
   }
 
   const double rms_error = sqrt(sum_sq / errors.size());
@@ -133,8 +133,8 @@ int main(int argc, char **argv)
     track_estimates.track_num = track->track_num_;
 
     // Iterate over all frames for this track.
-    //printf("Processing track %zu / %zu with %zu frames\n", i+1, tracks.size(),
-    //       frames.size());
+    printf("Processing track %zu / %zu with %zu frames\n", i+1, tracks.size(),
+           frames.size());
 
     for (size_t j = 0; j < frames.size(); ++j) {
       boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
