@@ -107,8 +107,8 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
 
       track_errors.push_back(estimated_velocity_magnitude - gt_velocity_magnitude);
     }
-    printf("Errors for track: %d: ", track_num);
-    computeErrorStatistics(track_errors);
+    //printf("Errors for track: %d: ", track_num);
+    //computeErrorStatistics(track_errors);
   }
 
   printf("Overall stats:\n");
@@ -156,22 +156,16 @@ int main(int argc, char **argv)
     std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
         track->frames_;
 
-    /*if ( track->track_num_ != 2856) {
-      continue;
-    }*/
-
-    /*if (i < 100 || i > 150) {
-      continue;
-    }*/
-
     // Structure for storing track output.
     TrackResults track_estimates;
     track_estimates.track_num = track->track_num_;
 
 
     // Iterate over all frames for this track.
-    printf("Processing track %zu / %zu, tracknum %d with %zu frames\n", i+1, tracks.size(),
-          track->track_num_, frames.size());
+    //if (i+1 % 10 == 0){
+      printf("Processing track %zu / %zu, tracknum %d with %zu frames\n", i+1, tracks.size(),
+            track->track_num_, frames.size());
+    //}
 
     bool skip_next = false;
     double prev_angle = 0;
@@ -194,29 +188,21 @@ int main(int argc, char **argv)
       if (j > 0) {
         if (angle_diff <= 1 || j == 0) {
           if (!skip_next) {
-            //printf("Including frame: %zu\n", j);
             if (time_diff >= 0.05) {
               track_estimates.ignore_frame.push_back(false);
             } else {
               track_estimates.ignore_frame.push_back(true);
             }
           } else {
-            //printf("Not including frame: %zu because of skip next\n", j);
             track_estimates.ignore_frame.push_back(true);
           }
           skip_next = false;
         } else {
-          //printf("Not including frame: %zu, angle diff: %lf\n", j, angle_diff);
           track_estimates.ignore_frame.push_back(true);
-          //if (j != 1){
-            //printf("Skipping next frame\n");
             skip_next = true;
-          //}
             if (j > 1) {
               track_estimates.ignore_frame[j-2] = true;
-              //printf("popping previous\n");
             }
-          //track_color->frames_.pop_back();
         }
       }
 
@@ -231,15 +217,6 @@ int main(int argc, char **argv)
         track_estimates.estimated_velocities.push_back(estimated_velocity);
       }
     }
-
-    /*for (size_t j = 0; j < track_estimates.estimated_velocities.size(); ++j) {
-      if (track_estimates.ignore_frame[j]) {
-        printf("Skipping frame: %zu\n", j);
-      } else {
-        printf("Not Skipping frame: %zu\n", j);
-      }
-    }*/
-
 
     velocity_estimates.push_back(track_estimates);
   }
