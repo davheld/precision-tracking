@@ -20,8 +20,8 @@ using std::max;
 
 namespace {
 
-const bool k_NNTracking = true;
-const bool use_lf_tracker = true;
+const bool k_NNTracking = false;
+const bool use_lf_tracker = false;
 
 //const double min_transforms = getenv("MIN_TRANSFORMS") ? atoi(getenv("MIN_TRANSFORMS")) : 1;
 
@@ -69,8 +69,6 @@ void APTracker3d::recomputeProbs(
 
   size_t num_probs = conditional_probs.size();
 
-  //printf("Prior prob: %lf\n", prior_prob);
-
   for (size_t i = 0; i < num_probs; ++i) {
     const double& conditional_prob = conditional_probs[i];
     const double new_log_prob = log(prior_prob * conditional_prob);
@@ -93,9 +91,6 @@ void APTracker3d::track(
     const double down_sample_factor_prev,
     const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) {
-  //HighResTimer hrt("Initial tracking estimate - setup");
-  //hrt.start();
-
   const double kMaxXYStepSize = xy_step_size;
 
   // Compute the sensor horizontal resolution
@@ -128,8 +123,6 @@ void APTracker3d::track(
     lf_discrete_3d_.setPrevPoints(prev_points);
   }
 
-
-
   if (k_NNTracking) {
     if (use_lf_tracker) {
       lf_discrete_3d_.track(current_xy_step_size, current_z_step_size, xRange, yRange, zRange,
@@ -144,11 +137,6 @@ void APTracker3d::track(
         motion_model, horizontal_distance, down_sample_factor_prev, point_ratio,
         &scored_transforms3D);
   }
-
-
-
-  /*printf("Tracked at resolution: %lf, obtained %zu scored transforms\n",
-      kMaxXYStepSize, scored_transforms2D.getScoredTransforms().size());*/
 
   // Recompute the probability of each of these transforms using the prior
   // probability.
@@ -205,16 +193,10 @@ void APTracker3d::track(
     }
   }
 
-  //printf("Total scored transforms: %zu\n",
-  //    final_scored_transforms3D->getScoredTransforms().size());
-
   /*if (kSearchYaw) {
     ScoredTransformXYZ best_transform;
     double best_transform_prob;
     final_scored_transforms3D->findBest(&best_transform, &best_transform_prob);
-
-    //printf("Best transform:\n");
-    //best_transform.print();*/
 
     /*Eigen::Vector4d centroid4d = Eigen::Vector4d::Zero();
     centroid4d(0) = current_points_centroid(0);
@@ -232,10 +214,6 @@ void APTracker3d::track(
     const double z = mean_velocity(2) * time_diff;
 
     ScoredTransformXYZ mean_transform(x, y, z, 0, 0, 0, 0, 1);*/
-
-    //printf("Mean transform:\n");
-    //mean_transform.print();
-
 
     /*nn_tracker_.findYaw(
         current_points, prev_points,
@@ -321,8 +299,6 @@ void APTracker3d::makeNewTransforms3D(
   // Only recompute probabilities that are greater than min_prob.
   const double min_prob = kMaxNumTransforms == 0 ? 0 : 1.0 / kMaxNumTransforms;
   //const double min_prob = 0;
-
-  //printf("Filtering transforms above probability: %lf\n", min_prob);
 
   const std::vector<double>& probs = scored_transforms->getNormalizedProbs();
 

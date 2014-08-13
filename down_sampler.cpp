@@ -98,7 +98,7 @@ boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > DownSampler::downSamplePoi
     n++;
   }
 
-  //printf("Target was %d points, down-sampled from %zu to %zu points", targetNumPoints, num_points, downSampledPoints->size());
+  //printf("Target was %d points, down-sampled from %zu to %zu points\n", targetNumPoints, num_points, downSampledPoints->size());
 
   return downSampledPoints;
 }

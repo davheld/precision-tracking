@@ -28,7 +28,6 @@ public:
       const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previousModel,
       const double horizontal_distance,
       const MotionModel& motion_model,
-      Eigen::Affine3f* full_alignment_to_prev,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   static void computeCentroid(
@@ -47,12 +46,6 @@ private:
       std::pair <double, double> xRange,
       std::pair <double, double> yRange,
       std::pair <double, double> zRange,
-      double& bestX,
-      double& bestY,
-      double& bestZ,
-      double& bestRoll,
-      double& bestPitch,
-      double& bestYaw,
       const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
       const Eigen::Vector3f &current_points_centroid,
       const MotionModel& motion_model,

@@ -27,9 +27,6 @@
 #include <pcl/console/print.h>
 #include <pcl/console/parse.h>
 
-//#include "../../ros-pkg/bag_of_tricks/include/bag_of_tricks/high_res_timer.h"
-
-
 using std::max;
 using std::min;
 using std::pair;
@@ -75,7 +72,7 @@ const double pi = boost::math::constants::pi<double>();
 
 // ------------------------
 
-const bool use_lf_tracker = true;
+const bool use_lf_tracker = false;
 
 const bool kUseMotion = true;
 
@@ -238,9 +235,6 @@ void LFDiscrete3d::init(const double xy_grid_step,
           const double z_grid_step,
           const double horizontal_distance,
           const double down_sample_factor) {
-  //HighResTimer hrt("Initializing LFDiscrete3d");
-  //hrt.start();
-
   xy_grid_step_ = xy_grid_step;
   z_grid_step_ = z_grid_step;
 
@@ -275,16 +269,10 @@ void LFDiscrete3d::init(const double xy_grid_step,
 
   xySize_ = xSize_ * ySize_;
 
-  //hrt.stop();
-  //hrt.printMilliseconds();
-
   //printf("Size: %d, %d, %d\n", xSize_, ySize_, zSize_);
 
   /*std::vector<std::vector<std::vector<bool> > > vect1(xSize,
             vector<vector<bool> >(ySize, vector<bool>(zSize, false)));*/
-
-  //hrt.reset("Resize the cache");
-  //hrt.start();
 
   // Resize the likelihood field cache.
   //lf_cache_3D_ = std::vector<std::vector<std::vector<LFVal> > > (xSize,
@@ -328,12 +316,6 @@ void LFDiscrete3d::init(const double xy_grid_step,
       vect2[i][j].resize(zSize);
     }
   }*/
-
-  /*hrt.stop();
-  hrt.printMilliseconds();
-  hrt.reset("More stuff");
-  hrt.start();*/
-
 
   // Build the occupancy map.
    //vector<vector<vector<double> >  > occupancyMap3D(xSize,
@@ -435,18 +417,10 @@ void LFDiscrete3d::track(
 
   //printf("Xy step: %lf, z step: %lf\n", xy_stepSize, z_stepSize);
 
-  //HighResTimer hrt("Find candidate xyz locations");
-  //hrt.start();
-
   // Find all candidate xyz transforms.
   vector<XYZTransform> xyz_transforms;
   DensityGridTracker::createCandidateXYZTransforms(xy_stepSize, z_stepSize,
       xRange, yRange, zRange, &xyz_transforms);
-
-  /*hrt.stop();
-  hrt.printMilliseconds();
-  hrt.reset("Score xyz locations");
-  hrt.start();*/
 
   // Get scores for each of the xyz transforms.
   scoreXYZTransforms(
@@ -454,9 +428,6 @@ void LFDiscrete3d::track(
       xy_stepSize, z_stepSize,
       xyz_transforms, motion_model, horizontal_distance, down_sample_factor,
       point_ratio, transforms);
-
-  //hrt.stop();
-  //hrt.printMilliseconds();
 }
 
 void LFDiscrete3d::scoreXYZTransforms(
@@ -470,40 +441,17 @@ void LFDiscrete3d::scoreXYZTransforms(
     const double down_sample_factor,
     const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
-  //HighResTimer hrt("scoreXYZTransforms - Setup");
-  //hrt.start();
-
   // Initialize variables for tracking grid.
   init(xy_stepSize, z_stepSize, horizontal_distance, down_sample_factor);
 
   const size_t num_transforms = transforms.size();
-  //printf("Num XYZ transforms: %zu\n", num_transforms);
-  //printf("Num current points: %zu\n", current_points->size());
 
   const double roll = 0, yaw = 0, pitch = 0;
-
-  //printf("Scoring %zu transforms\n", num_transforms);
-  /*printf("xy_grid_step_: %lf\n", xy_grid_step_);
-  printf("z_grid_step_: %lf\n", z_grid_step_);
-  printf("xy_exp_factor_: %lf\n", xy_exp_factor_);
-  printf("z_exp_factor_: %lf\n", z_exp_factor_);
-  printf("min_occupancy_: %lf\n", min_occupancy_);
-  printf("search_radius_: %lf\n", search_radius_);
-  printf("min_center_pt_: %lf, %lf, %lf\n", min_center_pt_.x, min_center_pt_.y, min_center_pt_.z);
-  printf("minPt_: %lf, %lf, %lf\n", minPt_.x, minPt_.y, minPt_.z);*/
 
   // Compute scores for all of the transforms using the occupancy map.
   scored_transforms->clear();
   scored_transforms->resize(num_transforms);
 
-  /*hrt.stop();
-  hrt.printMilliseconds();
-  hrt.reset("Score xyz locations");
-  hrt.start();*/
-
-  //printf("Scoring %zu transforms\n", num_transforms);
-
-  //#pragma omp parallel for
   for(size_t i = 0; i < num_transforms; ++i){
     const XYZTransform& transform = transforms[i];
     const double& x = transform.x;
@@ -514,16 +462,11 @@ void LFDiscrete3d::scoreXYZTransforms(
     const double log_prob = getLogProbability(current_points,
         motion_model, x, y, z);
 
-    //printf("x, y, z: %lf, %lf, %lf, log prob: %lf\n", x, y, z, log_prob);
-
     // Save the complete transform with its log probability.
     const ScoredTransformXYZ scored_transform(x, y, z,
         log_prob, volume);
     scored_transforms->set(scored_transform, i);
   }
-
-  //hrt.stop();
-  //hrt.printMilliseconds();
 }
 
 
@@ -574,14 +517,9 @@ double LFDiscrete3d::getLogProbability(
       lf_cache_3D_log_prob_[index] = get_log_prob(x_index, y_index, z_index,
           x, y, z, pt);
       lf_cache_3D_cached_[index] = true;
-      //printf("Computing value: %lf\n", lf_cache_3D_log_prob_[index]);
-    } else {
-      //printf("Using cached value\n");
     }
 
-    //#pragma omp atomic
     log_measurement_prob += lf_cache_3D_log_prob_[index];
-    //printf("log_measurement_prob: %lf\n", log_measurement_prob);
   }
 
   // Compute the motion model probability.
@@ -590,8 +528,7 @@ double LFDiscrete3d::getLogProbability(
   /*if (!kUseMotion) {
     motion_model_prob = 1;
   } else if (kUseClosestMotion) {*/
-    motion_model_prob = motion_model.computeScore(x, y, z,
-        xy_grid_step_, z_grid_step_);
+    motion_model_prob = motion_model.computeScore(x, y, z);
   /*} else {
     motion_model_prob = motion_model.computeScore(x, y, z);
   }*/
@@ -600,9 +537,6 @@ double LFDiscrete3d::getLogProbability(
   // get the final log probability.
   const double log_prob =
       log(motion_model_prob) + kMeasurementDiscountFactor * log_measurement_prob;
-
-  //printf("motion: %lf, discount: %lf, log_measurement: %lf\n", log(motion_model_prob),
-  //    kMeasurementDiscountFactor, log_measurement_prob);
 
   return log_prob;
 }

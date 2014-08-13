@@ -178,15 +178,18 @@ bool TrackManagerColor::deserialize(istream& istrm) {
     return false;
   }
   getline(istrm, line);
+
    
-  //int i = 0;
+  int i = 0;
   while(true) {
+   //printf("Deserializing track #%d\n", i);
     boost::shared_ptr<Track> tr(new Track());
     if(tr->deserialize(istrm)){
+      //printf("Done deserializing track #%d\n", i);
       //if (i % 1000 == 0){
       //	printf("Deserializing track #%d\n", i);
       //}
-      //i++;
+      i++;
       tracks_.push_back(tr);
     } else
       break;
@@ -312,8 +315,10 @@ void Track::serialize(ostream& out) const {
 }
 
 bool Track::deserialize(istream& istrm) {
-  if(istrm.eof())
+  if(istrm.eof()) {
+    printf("Error - Reached end of file\n");
     return false;
+  }
 
   long begin = istrm.tellg();
   frames_.clear();
@@ -322,6 +327,7 @@ bool Track::deserialize(istream& istrm) {
   getline(istrm, line);
   if(line.compare("Track") != 0) {
     istrm.seekg(begin);
+    printf("Expected: Track, got: '%s'\n", line.c_str());
     return false;
   }
 
@@ -342,6 +348,7 @@ if (!checkLine(istrm, "track_num_")) return false;
     return false;*/
   istrm >> track_num_;
   getline(istrm, line);
+  //printf("Track num: %d\n", track_num_);
 
   /*getline(istrm, line);
   if(line.compare("label_") != 0)
@@ -362,10 +369,12 @@ if (!checkLine(istrm, "track_num_")) return false;
   size_t num_frames = 0;
   istrm >> num_frames;
   getline(istrm, line);
+  //printf("num_frames: %zu\n", num_frames);
   
   frames_.resize(num_frames);
   for(size_t i=0; i<num_frames; ++i) {
     assert(!frames_[i]);
+    //printf("Deserializing frame: %zu\n", i);
     frames_[i] = boost::shared_ptr<Frame>(new Frame(istrm));
   }
   
@@ -521,17 +530,22 @@ Frame::Frame(istream& istrm) :
   serialization_version_(FRAME_SERIALIZATION_VERSION),
   spin_offset_(-1)
 {
-  assert(deserialize(istrm));
-  assert(!centroid_);
+  //printf("Frame deserialization constructor\n");
+  deserialize(istrm);
+  //assert(deserialize(istrm));
+  //assert(!centroid_);
 }
 
 bool Frame::deserialize(std::istream& istrm) {
+  //printf("Deserializing frame\n");
+
   string line;
   getline(istrm, line);
   if(line.compare("Frame") != 0) {
     cout << "Expected 'Frame', got " << line << endl;
     return false;
   }
+  //printf("Read 'frame'\n");
   
   getline(istrm, line);
   if(line.compare("serialization_version_") != 0) {
@@ -544,6 +558,7 @@ bool Frame::deserialize(std::istream& istrm) {
     return false;
   }
   getline(istrm, line);
+  //printf("Got frame serialization version: %d\n", serialization_version_);
 
   getline(istrm, line);
   if(line.compare("timestamp_") != 0) {
@@ -552,6 +567,7 @@ bool Frame::deserialize(std::istream& istrm) {
   }
   istrm.read((char*)&timestamp_, sizeof(double));
   getline(istrm, line);
+  //printf("Got timestamp: %lf\n", timestamp_);
 
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
   deserializePointCloud(istrm, cloud);
@@ -1282,8 +1298,8 @@ bool readCloud(std::istream& s, pcl::PCLPointCloud2 &v)
 
   if (!checkLine(s, "fields[]")) return false;
 
-  for (size_t i = 0; i < num_fields; ++i) {
-    //printf("Reading field %zu\n", i);
+  for (int i = 0; i < num_fields; ++i) {
+    //printf("Reading field %d\n", i);
     s >> v.fields[i].name;
     getline(s, line);
     //printf("Read name: %s\n", v.fields[i].name.c_str());

@@ -131,21 +131,6 @@ Eigen::Vector3d MotionModel::computeMeanVelocity(
 }
 
 double MotionModel::computeScore(const double x, const double y,
-    const double z, const double xy_gridStep,
-    const double z_gridStep) const {
-  if (!valid_){
-    return 1;
-  }
-
-  TransformComponents components;
-  components.x = x;
-  components.y = y;
-  components.z = z;
-  const double new_score = computeScore(components);
-  return new_score;
-}
-
-double MotionModel::computeScore(const double x, const double y,
     const double z) const {
   if (!valid_){
     return 1;

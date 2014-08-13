@@ -80,22 +80,6 @@ public:
   // Compute the score given the x,y, and z components.
   double computeScore(const double x, const double y, const double z) const;
 
-  // Compute the score of the best position within this grid cell.
-  double computeScore(const double x, const double y,
-      const double z, const double xy_gridStep,
-      const double z_gridStep) const;
-
-  double computeScoreXY(const double x, const double y,
-    const double xy_gridStep) const;
-
-	// Compute the score of just the x,y components, choosing the optimal z.
-	double computeScoreXY(const double x, const double y) const;
-
-	// Compute the score of just the z component, choosing the optimal x and y.
-	double computeScoreZ(const double z) const;
-
-	double computeScoreZ(const double z, const double z_gridStep) const;
-
   Eigen::Vector3f get_mean_velocity() const {
     return mean_velocity_.cast<float>();
   }
@@ -115,13 +99,8 @@ public:
     return covariance_delta_position_inv_;
   }
 
-
 	double get_min_score() {
 	  return min_score_;
-	}
-
-	void print_covariance_propagation_uncertainty() {
-	  cout << "Covariance_propagation_uncertainty_: " << endl << covariance_propagation_uncertainty_ << endl;
 	}
 
 private:

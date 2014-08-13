@@ -49,7 +49,7 @@ const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTH
 // dependencies between neighboring points).
 const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? atof(getenv("MEASUREMENT_DISCOUNT_3D")) : 1;
 
-const bool k_NNTracking = true;
+const bool k_NNTracking = false;
 
 const double pi = boost::math::constants::pi<double>();
 

@@ -32,9 +32,9 @@ using std::make_pair;
 
 namespace{
 
-const bool kUseMode = getenv("USE_MODE");
+const bool kUseMode = false;
 
-const bool useCentroid = getenv("USE_CENTROID");
+const bool useCentroid = false;
 
 }  // namespace
 
@@ -109,7 +109,7 @@ void ModelBuilder::addPoints(
       else {
         // Align.
         precision_tracker_.track(current_points, previousModel,
-            horizontal_distance, *motion_model_, &full_alignment_to_prev, &scored_transforms);
+            horizontal_distance, *motion_model_, &scored_transforms);
 
         motion_model_->addTransformsWeightedGaussian(scored_transforms,
                                                     vlf_time_stamp_diff);
