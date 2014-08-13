@@ -6,13 +6,14 @@
  */
 
 #include "ap_tracker3d.h"
+
+#include <vector>
+#include <algorithm>
+
+#include <boost/math/constants/constants.hpp>
+
 #include "density_grid_tracker.h"
 #include "scored_transform.h"
-#include <vector>
-#include <boost/math/constants/constants.hpp>
-#include <algorithm>
-//#include "NNTracker3d.h"
-//#include "../../ros-pkg/bag_of_tricks/include/bag_of_tricks/high_res_timer.h"
 
 using std::vector;
 using std::max;
@@ -22,7 +23,7 @@ namespace {
 const bool k_NNTracking = true;
 const bool use_lf_tracker = true;
 
-const double min_transforms = getenv("MIN_TRANSFORMS") ? atoi(getenv("MIN_TRANSFORMS")) : 1;
+//const double min_transforms = getenv("MIN_TRANSFORMS") ? atoi(getenv("MIN_TRANSFORMS")) : 1;
 
 const double pi = boost::math::constants::pi<double>();
 
@@ -31,7 +32,6 @@ const double kMinResFactor = getenv("MIN_RES_FACTOR") ? atof(getenv("MIN_RES_FAC
 const bool kSearchYaw = false;
 
 const double kMaxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 1;
-
 
 const double kMinXYStep = getenv("MIN_XY_STEP") ? atof(getenv("MIN_XY_STEP")) : 0.05;
 
@@ -74,9 +74,6 @@ void APTracker3d::recomputeProbs(
   for (size_t i = 0; i < num_probs; ++i) {
     const double& conditional_prob = conditional_probs[i];
     const double new_log_prob = log(prior_prob * conditional_prob);
-    /*printf("Conditional: %lf, New: %lf, Pos: %lf, %lf, %lf\n",
-        conditional_prob, prior_prob * conditional_prob, scored_transforms_vect[i].getX(),
-        scored_transforms_vect[i].getY(), scored_transforms_vect[i].getZ());*/
     scored_transforms_vect[i].setUnnormalizedLogProb(new_log_prob);
   }
 }
@@ -346,7 +343,7 @@ void APTracker3d::makeNewTransforms3D(
     const double old_y = old_scored_transform.getY();
     const double old_z = old_scored_transform.getZ();
 
-    if (probs[i] > min_prob || i < min_transforms) {
+    if (probs[i] > min_prob) {
       *total_recomputing_prob += probs[i];
 
       to_remove.push_back(i);

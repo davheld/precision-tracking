@@ -179,14 +179,14 @@ bool TrackManagerColor::deserialize(istream& istrm) {
   }
   getline(istrm, line);
    
-  int i = 0;
+  //int i = 0;
   while(true) {
     boost::shared_ptr<Track> tr(new Track());
     if(tr->deserialize(istrm)){
       //if (i % 1000 == 0){
-    		printf("Deserializing track #%d\n", i);
+      //	printf("Deserializing track #%d\n", i);
       //}
-    	i++;
+      //i++;
       tracks_.push_back(tr);
     } else
       break;

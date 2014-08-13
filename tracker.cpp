@@ -17,6 +17,7 @@ using std::string;
 struct TrackResults {
   int track_num;
   std::vector<Eigen::Vector3f> estimated_velocities;
+  std::vector<bool> ignore_frame;
 };
 
 void getGTVelocities(const string& gt_folder, const int track_num,
@@ -27,7 +28,7 @@ void getGTVelocities(const string& gt_folder, const int track_num,
   filename_stream << gt_folder << "/track" << track_num << "gt.txt";
   filename = filename_stream.str();
 
-  printf("Loading file: %s\n", filename.c_str());
+  //printf("Loading file: %s\n", filename.c_str());
 
   FILE* fid = fopen(filename.c_str(), "r");
 
@@ -49,7 +50,7 @@ void computeErrorStatistics(const std::vector<double>& errors) {
 
   size_t num_frames = errors.size();
 
-  printf("Computing error statistics over %zu frames\n", num_frames);
+  //printf("Computing error statistics over %zu frames\n", num_frames);
 
   for (size_t i = 0; i < num_frames; ++i) {
     sum_sq += pow(errors[i], 2);
@@ -57,7 +58,8 @@ void computeErrorStatistics(const std::vector<double>& errors) {
 
   const double rms_error = sqrt(sum_sq / errors.size());
 
-  printf("RMS error: %lf\n", rms_error);
+  //printf("RMS error: %lf\n", rms_error);
+  printf("%lf\n", rms_error);
 }
 
 void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
@@ -75,20 +77,41 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
     getGTVelocities(gt_folder, track_num, &gt_velocities);
 
     if (track_results.estimated_velocities.size() != gt_velocities.size()) {
-      printf("Error: estimated velocities != gt_velocities; %zu != %zu\n",
-             track_results.estimated_velocities.size(), gt_velocities.size());
+      //printf("Error: estimated velocities != gt_velocities; %zu != %zu\n",
+      //       track_results.estimated_velocities.size(), gt_velocities.size());
     }
 
+    int skipped = 0;
+
+    std::vector<double> track_errors;
+
     for (size_t j = 0; j < track_results.estimated_velocities.size(); ++j) {
+      if (track_results.ignore_frame[j]) {
+        //printf("Skipping frame: %zu\n", j);
+        skipped++;
+        continue;
+      }
+
+      //printf("Not skipping frame: %zu\n", j);
+
       const Eigen::Vector3f& estimated_velocity =
           track_results.estimated_velocities[j];
 
       const double estimated_velocity_magnitude = estimated_velocity.norm();
-      const double gt_velocity_magnitude = gt_velocities[j];
+      const double gt_velocity_magnitude = gt_velocities[j-skipped];
+
+      //printf("%zu: Vel: %lf, gt: %lf\n", j, estimated_velocity_magnitude,
+      //       gt_velocity_magnitude);
 
       errors.push_back(estimated_velocity_magnitude - gt_velocity_magnitude);
+
+      track_errors.push_back(estimated_velocity_magnitude - gt_velocity_magnitude);
     }
+    printf("Errors for track: %d: ", track_num);
+    computeErrorStatistics(track_errors);
   }
+
+  printf("Overall stats:\n");
 
   computeErrorStatistics(errors);
 }
@@ -117,27 +140,85 @@ int main(int argc, char **argv)
   // Structure for tracking.
   ModelBuilder aligner(false);
 
+  printf("Tracking objects - please wait...\n");
+
   HighResTimer hrt("Total time for tracking");
   hrt.start();
 
   int total_num_frames = 0;
 
   for (size_t i = 0; i < tracks.size(); ++i) {
+    // Reset the model builder for this new track.
+    aligner.clear();
+
     // Extract frames.
     const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
     std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
         track->frames_;
 
+    /*if ( track->track_num_ != 2856) {
+      continue;
+    }*/
+
+    /*if (i < 100 || i > 150) {
+      continue;
+    }*/
+
     // Structure for storing track output.
     TrackResults track_estimates;
     track_estimates.track_num = track->track_num_;
 
-    // Iterate over all frames for this track.
-    printf("Processing track %zu / %zu with %zu frames\n", i+1, tracks.size(),
-           frames.size());
 
+    // Iterate over all frames for this track.
+    printf("Processing track %zu / %zu, tracknum %d with %zu frames\n", i+1, tracks.size(),
+          track->track_num_, frames.size());
+
+    bool skip_next = false;
+    double prev_angle = 0;
+    double prev_time = 0;
+
+    //printf("Iterating over %zu frames\n", frames.size());
     for (size_t j = 0; j < frames.size(); ++j) {
       boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
+
+      const Eigen::Vector3f& centroid = frame->getCentroid();
+      const double angle = atan2(centroid(1), centroid(0));
+      const double angle_diff = fabs(angle - prev_angle);
+
+      const double curr_time = frame->timestamp_;
+      const double time_diff = curr_time - prev_time;
+
+      prev_angle = angle;
+      //printf("%zu: Angle: %lf, angle diff: %lf\n", j, angle, angle_diff);
+
+      if (j > 0) {
+        if (angle_diff <= 1 || j == 0) {
+          if (!skip_next) {
+            //printf("Including frame: %zu\n", j);
+            if (time_diff >= 0.05) {
+              track_estimates.ignore_frame.push_back(false);
+            } else {
+              track_estimates.ignore_frame.push_back(true);
+            }
+          } else {
+            //printf("Not including frame: %zu because of skip next\n", j);
+            track_estimates.ignore_frame.push_back(true);
+          }
+          skip_next = false;
+        } else {
+          //printf("Not including frame: %zu, angle diff: %lf\n", j, angle_diff);
+          track_estimates.ignore_frame.push_back(true);
+          //if (j != 1){
+            //printf("Skipping next frame\n");
+            skip_next = true;
+          //}
+            if (j > 1) {
+              track_estimates.ignore_frame[j-2] = true;
+              //printf("popping previous\n");
+            }
+          //track_color->frames_.pop_back();
+        }
+      }
 
       // Track object.
       Eigen::Vector3f estimated_velocity;
@@ -151,8 +232,18 @@ int main(int argc, char **argv)
       }
     }
 
+    /*for (size_t j = 0; j < track_estimates.estimated_velocities.size(); ++j) {
+      if (track_estimates.ignore_frame[j]) {
+        printf("Skipping frame: %zu\n", j);
+      } else {
+        printf("Not Skipping frame: %zu\n", j);
+      }
+    }*/
+
+
     velocity_estimates.push_back(track_estimates);
   }
+
 
   hrt.stop();
   hrt.print();

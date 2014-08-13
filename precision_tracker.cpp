@@ -24,9 +24,9 @@ const int fineSearchNumPoints = getenv("FINE_SEARCH_NUM_POINTS") ? atoi(getenv("
 
 // Set to 0 so we do not search over z (for objects moving in urban settings,
 // the vertical motion is small).
-const double maxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 0;
+const double maxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 1;
 
-const bool kUseAbsoluteRef = getenv("USE_ABSOLUTE_REFERENCE");
+const bool kUseAbsoluteRef = false;
 
 const double maxXY = getenv("MAX_XY") ? atof(getenv("MAX_XY")) : 2;
 
@@ -87,7 +87,7 @@ Eigen::Matrix4f makeTransformationMatrix(const double& x, const double& y, const
 } // namespace
 
 PrecisionTracker::PrecisionTracker()
- : lf_discrete_3d_(LFDiscrete3d::getInstance())
+ //: //lf_discrete_3d_(LFDiscrete3d::getInstance())
       //density_grid_tracker3d_(DensityGridTracker3d::getInstance())
 {
   // TODO Auto-generated constructor stub

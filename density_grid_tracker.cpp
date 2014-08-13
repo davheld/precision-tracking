@@ -127,7 +127,44 @@ void DensityGridTracker::createCandidateXYZTransforms(
     const std::pair <double, double>& yRange,
     const std::pair <double, double>& zRange_orig,
     std::vector<XYZTransform>* transforms) {
-  if (xy_step_size == 0) {
+  std::pair<double, double> zRange;
+  if (z_step_size > fabs(zRange_orig.first)) {
+    zRange.first = 0;
+    zRange.second = 0;
+  } else {
+    zRange.first = zRange_orig.first;
+    zRange.second = zRange_orig.second;
+  }
+
+  //printf("xRange: %lf to %lf, stepSize: %lf\n",  xRange.first,  xRange.second, xy_step_size);
+  //printf("yRange: %lf to %lf, stepSize: %lf\n",  yRange.first,  yRange.second, xy_step_size);
+  //printf("zRange: %lf to %lf, stepSize: %lf\n",  zRange.first,  zRange.second, z_step_size);
+
+  // Compute the number of transforms along each direction.
+  const int num_x_locations = (xRange.second - xRange.first) / xy_step_size;
+  const int num_y_locations = (yRange.second - yRange.first) / xy_step_size;
+  int num_z_locations;
+  if (z_step_size == 0) {
+    num_z_locations = 1;
+  } else {
+    num_z_locations = (zRange.second - zRange.first) / z_step_size;
+  }
+
+  // Reserve space for all of the transforms.
+  transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
+
+  const double volume = pow(xy_step_size, 2) * z_step_size;
+
+  // Create a list of candidate transforms.
+  for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
+    for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
+      XYZTransform transform(x, y, 0, volume);
+      transforms->push_back(transform);
+    }
+  }
+
+
+  /*if (xy_step_size == 0) {
     printf("Error - xy step size must be > 0");
     exit(1);
   }
@@ -165,7 +202,7 @@ void DensityGridTracker::createCandidateXYZTransforms(
         transforms->push_back(transform);
       }
     }
-  }
+  }*/
 }
 
 void DensityGridTracker::scoreXYZTransforms(
@@ -263,8 +300,6 @@ void DensityGridTracker::computeDensityGridSize(
 
   // Compute the sensor horizontal resolution
   const double velodyne_horizontal_res = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
-
-  //printf("Horizontal res: %lf, kSigmaFactor: %lf\n", velodyne_horizontal_res, kSigmaFactor);
 
   // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
   const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
@@ -453,6 +488,9 @@ double DensityGridTracker::getLogProbability(
   // get the final log probability.
   const double log_prob =
       log(motion_model_prob) + discount_factor_ * kMeasurementDiscountFactor * log_measurement_prob;
+
+  //printf("motion: %lf, discount: %lf, log_measurement: %lf\n", log(motion_model_prob),
+  //    discount_factor_ * kMeasurementDiscountFactor, log_measurement_prob);
 
   //printf("motion_model_prob: %lf, log_measurement_prob: %lf\n",
   //    motion_model_prob, log_measurement_prob);

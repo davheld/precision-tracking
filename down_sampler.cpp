@@ -9,7 +9,7 @@
 
 namespace {
 
-const bool useCeil = getenv("USE_CEIL");
+const bool useCeil = true; //getenv("USE_CEIL");
 
 } // namespace
 

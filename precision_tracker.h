@@ -65,7 +65,7 @@ private:
   APTracker3d ap_tracker3d_;
   //const FastFunctions& fast_functions_;
 
-  LFDiscrete3d& lf_discrete_3d_;
+  //LFDiscrete3d& lf_discrete_3d_;
   //DensityGridTracker density_grid_tracker2d_;
   //DensityGridTracker3d& density_grid_tracker3d_;
   //NNTracker3d nn_tracker_;

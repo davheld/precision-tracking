@@ -21,6 +21,8 @@
 #include "motion_model.h"
 #include "density_grid_tracker.h"
 
+//#include "../../ros-pkg/bag_of_tricks/include/bag_of_tricks/high_res_timer.h"
+
 // Singleton Class.
 class LFDiscrete3d {
 public:
@@ -56,7 +58,7 @@ public:
       ScoredTransforms<ScoredTransformXYZ>* transforms);
 
   // Score each ofthe xyz transforms.
-  void scoreXYZTransforms(
+  virtual void scoreXYZTransforms(
       const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
       const Eigen::Vector3f &current_points_centroid,
       const double xy_stepSize,
@@ -130,8 +132,8 @@ private:
   //double default_val_;
 
   double xy_exp_factor_;
-  //double z_exp_factor_;
-  double min_density_;
+  double z_exp_factor_;
+  double min_occupancy_;
 
   double search_radius_;
 

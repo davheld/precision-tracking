@@ -188,22 +188,14 @@ ModelBuilder::ModelBuilder(
       accumulatedInterpolatedPointsFull(new pcl::PointCloud<pcl::PointXYZRGB>),
       accumulatedRawColoredPoints(new pcl::PointCloud<pcl::PointXYZRGB>),
       previousModel(new pcl::PointCloud<pcl::PointXYZRGB>),
-      //currImageOriginalSize(NULL),
-      //prevInterpolatedPts(new pcl::PointCloud<pcl::PointXYZRGB>),
       interpolatedPts(new pcl::PointCloud<pcl::PointXYZRGB>),
       coloredPts(new pcl::PointCloud<pcl::PointXYZRGB>),
       curr_vlf_timestamp(-1),
       prev_vlf_timestamp(-1),
-      //ransacAligner_(numSamplesForRANSAC, distance_threshold),
       visualize_(visualize)//,
       //fast_functions_(FastFunctions::getInstance()),
-      //density_grid_tracker3d_(DensityGridTracker3d::getInstance())
 {
-	/*PRINT_INFO("Using a value weight of %lf", valueWeight);
-	PRINT_INFO("Using a distanceWeight of %lf", distanceWeight);
-	PRINT_INFO("Using a percentMatchWeight of %lf", percentMatchWeight);
-	PRINT_INFO("Using a noMatchPenalty of %lf", noMatchPenalty);
-	PRINT_INFO("Using a occludedPointPenalty of %lf", occludedPointPenalty);*/
+  motion_model_.reset(new MotionModel);
 }
 
 ModelBuilder::~ModelBuilder() {
@@ -230,6 +222,7 @@ boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > ModelBuilder::shiftPCL(
 void ModelBuilder::clear(){
   accumulatedInterpolatedPoints->clear();
   accumulatedRawColoredPoints->clear();
+  motion_model_.reset(new MotionModel);
 }
 
 std::vector<int> ModelBuilder::getPointsPerFrameInterpolated() const{
@@ -367,7 +360,7 @@ void ModelBuilder::addPoints(
       estimated_vlf_time_stamps_.push_back(curr_vlf_timestamp);
       if (use_motion_model) {
         // Propogate the motion model forward to estimate the new position.
-      	motion_model_.propagate(vlf_time_stamp_diff);
+        motion_model_->propagate(vlf_time_stamp_diff);
       }
       //const Eigen::Matrix3d& covariance_inv = motion_model_.get_covariance_delta_position_inv();
       //PRINT_INFO_STREAM("covariance_delta_position_inv_1: " << endl << covariance_inv);
@@ -411,9 +404,9 @@ void ModelBuilder::addPoints(
 					//implement kalman filter here
 
 				  //Eigen::Matrix4f centroidDiffTransform = estimateAlignmentCentroidDiff(interpolatedPts, previousModel);
-					motion_model_.addCentroidDiff(centroidDiff, vlf_time_stamp_diff);
+          motion_model_->addCentroidDiff(centroidDiff, vlf_time_stamp_diff);
 
-					const Eigen::Vector3f& mean_displacement = motion_model_.mean_displacement();
+          const Eigen::Vector3f& mean_displacement = motion_model_->mean_displacement();
 					//PRINT_WARN_STREAM("mean_displacement: " << endl << mean_displacement);
 
 					full_alignment_to_prev = Eigen::Translation<float, 3>(mean_displacement);
@@ -427,9 +420,9 @@ void ModelBuilder::addPoints(
 
         // Align.
         precision_tracker_.track(current_points, previous_model_for_alignment,
-            horizontal_distance, motion_model_, &full_alignment_to_prev, &scored_transforms);
+            horizontal_distance, *motion_model_, &full_alignment_to_prev, &scored_transforms);
 
-        motion_model_.addTransformsWeightedGaussian(scored_transforms,
+        motion_model_->addTransformsWeightedGaussian(scored_transforms,
                                                     vlf_time_stamp_diff);
 			}
 			Eigen::Vector3f centroid;
@@ -463,11 +456,11 @@ void ModelBuilder::addPoints(
 				inverse_transformations_.push_back(real_transform_to_prev.matrix().inverse());
 
 
-				Eigen::Vector3f mean_displacement = motion_model_.mean_displacement();
+        Eigen::Vector3f mean_displacement = motion_model_->mean_displacement();
 				Eigen::Affine3f mean_translation; mean_translation = Eigen::Translation3f(mean_displacement);
 				transformations_mean_.push_back(mean_translation.matrix());
 
-				Eigen::Vector3f mean_velocity = motion_model_.get_mean_velocity();
+        Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
 
 				Eigen::Affine3f estimated_full_alignment_to_prev;
 

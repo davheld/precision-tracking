@@ -189,7 +189,7 @@ private:
 
   double vlf_time_stamp_diff_;
 
-  MotionModel motion_model_;
+  boost::shared_ptr<MotionModel> motion_model_;
 
   bool visualize_;
 

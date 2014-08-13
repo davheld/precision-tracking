@@ -72,8 +72,6 @@ public:
 
 	void propagate(const double& time_diff);
 	double computeScore(const TransformComponents& components) const;
-	double computeScore(const TransformComponents& components,
-	    const double xy_stepSize, const double z_stepSize) const;
 
 	Eigen::Vector3d computeMeanVelocity(
       const ScoredTransforms<ScoredTransformXYZ>& transforms,
