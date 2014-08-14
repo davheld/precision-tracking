@@ -182,10 +182,8 @@ bool TrackManagerColor::deserialize(istream& istrm) {
    
   int i = 0;
   while(true) {
-   //printf("Deserializing track #%d\n", i);
     boost::shared_ptr<Track> tr(new Track());
     if(tr->deserialize(istrm)){
-      //printf("Done deserializing track #%d\n", i);
       //if (i % 1000 == 0){
       //	printf("Deserializing track #%d\n", i);
       //}
@@ -327,7 +325,6 @@ bool Track::deserialize(istream& istrm) {
   getline(istrm, line);
   if(line.compare("Track") != 0) {
     istrm.seekg(begin);
-    printf("Expected: Track, got: '%s'\n", line.c_str());
     return false;
   }
 

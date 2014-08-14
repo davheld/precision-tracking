@@ -19,35 +19,35 @@ namespace {
 
 // We assume that there are this many independent points per object.  Beyond
 // this many, we discount the measurement model accordingly.
-const double max_discount_points = getenv("MAX_DISCOUNT") ? atof(getenv("MAX_DISCOUNT")) : 150.0;
+const double kMaxDiscountPoints = 150.0;
 
 // How far to spill over in the density grid (number of sigmas).
-const double kSpilloverRadius = getenv("SPILLOVER_RADIUS") ? atof(getenv("SPILLOVER_RADIUS")) : 2.0;
+const double kSpilloverRadius = 2.0;
 
 // Factor to multiply the sensor resolution for our measurement model.
 // We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
 // With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
-const double kSigmaFactor = getenv("SIGMA_FACTOR") ? atof(getenv("SIGMA_FACTOR")) : 0.5;
+const double kSigmaFactor = 0.5;
 
 // Factor to multiply the particle sampling resolution for our measurement  model.
 // We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
 // With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
-const double kSigmaGridFactor = getenv("SIGMA_GRID_FACTOR") ? atof(getenv("SIGMA_GRID_FACTOR")) : 1;
+const double kSigmaGridFactor = 1;
 
 // The noise in our sensor which is independent of the distance to the tracked object.
 // We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
 // With sigma^2 = kMinMeasurementVariance^2 + other terms.
-const double kMinMeasurementVariance = getenv("MIN_MEASUREMENT_VAR") ? atof(getenv("MIN_MEASUREMENT_VAR")) : 0.03;
+const double kMinMeasurementVariance = 0.03;
 
 // We add this to our Gaussian so we don't give 0 probability to points
 // that don't align.
 // We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
-const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTHING_FACTOR")) : 1;
+const double kSmoothingFactor = 0.8;
 
 // We multiply our log measurement probability by this factor, to decrease
 // our confidence in the measurement model (e.g. to take into account
 // dependencies between neighboring points).
-const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? atof(getenv("MEASUREMENT_DISCOUNT_3D")) : 1;
+const double kMeasurementDiscountFactor = 1;
 
 const bool k_NNTracking = false;
 
@@ -64,20 +64,6 @@ using std::vector;
 using std::pair;
 using std::max;
 using std::min;
-
-// Get the density grid index for a given 3D point.
-template <class Point>
-void pointToIndex(const Point& pt,
-    const double xy_gridStep,
-    const double z_gridStep,
-		const double x_offset,
-		const double y_offset,
-    const double z_offset,
-		int* xIndex, int* yIndex, int* zIndex) {
-  *xIndex = round(pt.x / xy_gridStep + x_offset);
-  *yIndex = round(pt.y / xy_gridStep + y_offset);
-  *zIndex = round(pt.z / z_gridStep + z_offset);
-}
 
 }  // namespace
 
@@ -105,7 +91,6 @@ void DensityGridTracker::track(
 		const MotionModel& motion_model,
 		const double horizontal_distance,
 		const double down_sample_factor,
-		const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* transforms) {
 	// Find all candidate xyz transforms.
   vector<XYZTransform> xyz_transforms;
@@ -117,7 +102,7 @@ void DensityGridTracker::track(
   		current_points, prev_points, current_points_centroid,
   		xy_stepSize, z_stepSize,
   		xyz_transforms, motion_model, horizontal_distance, down_sample_factor,
-  		point_ratio, transforms);
+      transforms);
 }
 
 void DensityGridTracker::createCandidateXYZTransforms(
@@ -215,10 +200,9 @@ void DensityGridTracker::scoreXYZTransforms(
     const MotionModel& motion_model,
     const double horizontal_distance,
     const double down_sample_factor,
-    const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
   // Determine the size and minimum density for the density grid.
-  computeDensityGridSize(prev_points, xy_stepSize, z_stepSize, point_ratio,
+  computeDensityGridSize(prev_points, xy_stepSize, z_stepSize,
       horizontal_distance, down_sample_factor);
 
   computeDensityGrid(prev_points);
@@ -230,13 +214,13 @@ void DensityGridTracker::scoreXYZTransforms(
   scored_transforms->reserve(num_transforms);
   for(size_t i = 0; i < num_transforms; ++i){
     const XYZTransform& transform = transforms[i];
-    const double& x = transform.x;
-    const double& y = transform.y;
-    const double& z = transform.z;
-    const double& volume = transform.volume;
+    const double x = transform.x;
+    const double y = transform.y;
+    const double z = transform.z;
+    const double volume = transform.volume;
 
-    const double log_prob = getLogProbability(current_points, minPt,
-        xy_grid_step, z_grid_step, motion_model, x, y, z);
+    const double log_prob = getLogProbability(current_points, min_pt_,
+        xy_grid_step_, z_grid_step_, motion_model, x, y, z);
 
     // Save the complete transform with its log probability.
     const ScoredTransformXYZ scored_transform(x, y, z, log_prob, volume);
@@ -248,45 +232,53 @@ void DensityGridTracker::computeDensityGridSize(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
     const double xy_stepSize,
     const double z_stepSize,
-    const double point_ratio,
     const double horizontal_distance,
     const double down_sample_factor) {
   // Get the appropriate size for the grid.
-  xy_grid_step = xy_stepSize;
-  z_grid_step = z_stepSize;
+  xy_grid_step_ = xy_stepSize;
+  z_grid_step_ = z_stepSize;
 
-  if (prev_points->size() < max_discount_points) {
-      discount_factor_ = 1;
+  // Downweight all points beyond kMaxDiscountPoints because they are not
+  // all independent.
+  if (prev_points->size() < kMaxDiscountPoints) {
+      discount_factor_ = kMeasurementDiscountFactor;
   } else {
-      discount_factor_ = max_discount_points / prev_points->size();
+      discount_factor_ = kMeasurementDiscountFactor *
+          (kMaxDiscountPoints / prev_points->size());
   }
 
   // Find the min and max of the previous points.
-  pcl::PointXYZRGB maxPt;
-  pcl::getMinMax3D(*prev_points, minPt, maxPt);
-
-  const double z_range = maxPt.z - minPt.z;
-
-  const double z_centering = fabs(z_grid_step - z_range) / 2;
+  pcl::PointXYZRGB max_pt;
+  pcl::getMinMax3D(*prev_points, min_pt_, max_pt);
 
   const double epsilon = 0.0001;
 
-  // Add some padding.
-  minPt.x -= (2 * xy_grid_step + epsilon);
-  minPt.y -= (2 * xy_grid_step + epsilon);
-  minPt.z -= (2 * z_grid_step + z_centering);
+  // We add one grid step of padding to allow for inexact matches.  The outer
+  // grid cells are kept empty and are used to represent the empty space
+  // around the tracked object.
+  min_pt_.x -= (2 * xy_grid_step_ + epsilon);
+  min_pt_.y -= (2 * xy_grid_step_ + epsilon);
 
-  maxPt.x += 2 * xy_grid_step;
-  maxPt.y += 2 * xy_grid_step;
-  maxPt.z += 2 * z_grid_step;
+  // If we have a large step size in the z-direction, we want to center
+  // the object within the grid cell.
+  const double z_range = max_pt.z - min_pt_.z;
+  const double z_centering = fabs(z_grid_step_ - z_range) / 2;
+  min_pt_.z -= (2 * z_grid_step_ + z_centering);
+
+  // We add one grid step of padding to allow for inexact matches.  The outer
+  // grid cells are kept empty and are used to represent the empty space
+  // around the tracked object.
+  max_pt.x += 2 * xy_grid_step_;
+  max_pt.y += 2 * xy_grid_step_;
+  max_pt.z += 2 * z_grid_step_;
 
   // Find the appropriate size for the density grid.
   xSize_ = min(kMaxXSize, max(1, static_cast<int>(
-      ceil((maxPt.x - minPt.x) / xy_grid_step))));
+      ceil((max_pt.x - min_pt_.x) / xy_grid_step_))));
   ySize_ = min(kMaxYSize, max(1, static_cast<int>(
-      ceil((maxPt.y - minPt.y) / xy_grid_step))));
+      ceil((max_pt.y - min_pt_.y) / xy_grid_step_))));
   zSize_ = min(kMaxZSize, max(1, static_cast<int>(
-      ceil((maxPt.z - minPt.z) / z_grid_step))));
+      ceil((max_pt.z - min_pt_.z) / z_grid_step_))));
 
   // Reset the density grid to the default value.
   const double default_val = log(kSmoothingFactor);
@@ -298,75 +290,99 @@ void DensityGridTracker::computeDensityGridSize(
     }
   }
 
+  // TODO - pass this as an input parameter.
   // Compute the sensor horizontal resolution
-  const double velodyne_horizontal_res = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+  const double velodyne_horizontal_res_actual = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+
+  // The effective resolution = resolution / downsample factor.
+  const double velodyne_horizontal_res = velodyne_horizontal_res_actual / down_sample_factor;
 
   // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
   const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
 
-  const double error1_xy = kSigmaGridFactor * xy_stepSize;
-  const double error2_xy = velodyne_horizontal_res * kSigmaFactor;
-  spillover_sigma_xy = sqrt(pow(error1_xy, 2) + pow(error2_xy, 2) + pow(kMinMeasurementVariance, 2));
+  // Compute the different sources of error in the xy directions.
+  const double sampling_error_xy = kSigmaGridFactor * xy_stepSize;
+  const double resolution_error_xy = velodyne_horizontal_res * kSigmaFactor;
+  const double noise_error_xy = kMinMeasurementVariance;
 
-  const double error1_z = kSigmaGridFactor * z_stepSize;
-  const double error2_z = velodyne_vertical_res * kSigmaFactor;
-  spillover_sigma_z = sqrt(pow(error1_z, 2) + pow(error2_z, 2) + pow(kMinMeasurementVariance, 2));
+  // The variance is a combination of these 3 sources of error.
+  spillover_sigma_xy_ = sqrt(pow(sampling_error_xy, 2) +
+                             pow(resolution_error_xy, 2) +
+                             pow(noise_error_xy, 2));
 
-  num_spillover_steps_xy =
-      ceil(kSpilloverRadius * spillover_sigma_xy / xy_grid_step - 1);
-  num_spillover_steps_z = 1;
-  //*num_spillover_steps_z = 1;
-  //*num_spillover_steps_z =
-  //    ceil(kSpilloverRadius * *spillover_sigma_z / *z_grid_step - 1);
+  // Compute the different sources of error in the z direction.
+  const double sampling_error_z = 0 ; //kSigmaGridFactor * z_stepSize;
+  const double resolution_error_z = velodyne_vertical_res * kSigmaFactor;
+  const double noise_error_z = kMinMeasurementVariance;
 
-  minDensity = kSmoothingFactor;
+  // The variance is a combination of these 3 sources of error.
+  spillover_sigma_z_ = sqrt(pow(sampling_error_z, 2) + pow(resolution_error_z, 2) +
+                            pow(noise_error_z, 2));
+
+  // In our discrete grid, we want to compute the Gaussian for a certian
+  // number of grid cells away from the point.
+  num_spillover_steps_xy_ =
+      ceil(kSpilloverRadius * spillover_sigma_xy_ / xy_grid_step_ - 1);
+
+  // TODO - try using this.
+  const int fake_num_spillover_steps_z =
+      ceil(kSpilloverRadius * spillover_sigma_z_ / z_grid_step_ - 1);
+
+  /*if (fake_num_spillover_steps_z > 1) {
+    printf("horizontal_distance: %lf, velodyne_vertical_res: %lf, z_grid_step_: %lf, "
+           "fake_num_spillover_steps_z: %d\n", horizontal_distance, velodyne_vertical_res,
+           z_grid_step_, fake_num_spillover_steps_z);
+  }*/
+
+  // Because
+  num_spillover_steps_z_ = 1;
+
+  min_density_ = kSmoothingFactor;
 }
 
 void DensityGridTracker::computeDensityGrid(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points) {
   // Apply this offset when converting from the point location to the index.
-  const double x_offset = -minPt.x / xy_grid_step;
-  const double y_offset = -minPt.y / xy_grid_step;
-  const double z_offset = -minPt.z / z_grid_step;
+  const double x_offset = -min_pt_.x / xy_grid_step_;
+  const double y_offset = -min_pt_.y / xy_grid_step_;
+  const double z_offset = -min_pt_.z / z_grid_step_;
 
-  // Convert the sigma to a factor such that
+  // Convert sigma to a factor such that
   // exp(-x^2 * grid_size^2 / 2 sigma^2) = exp(x^2 * factor)
   // where x is the number of grid steps.
-    const double xy_exp_factor = -1.0 * pow(xy_grid_step, 2) / (2 * pow(spillover_sigma_xy, 2));
-    const double z_exp_factor = -1.0 * pow(z_grid_step, 2) / (2 * pow(spillover_sigma_z, 2));
+  const double xy_exp_factor =
+      -1.0 * pow(xy_grid_step_, 2) / (2 * pow(spillover_sigma_xy_, 2));
+  const double z_exp_factor =
+      -1.0 * pow(z_grid_step_, 2) / (2 * pow(spillover_sigma_z_, 2));
 
+  // For any given point, the density falls off as a Gaussian to
+  // neighboring regions.
+  // Pre-compute the density spillover for different cell distances.
+  vector<vector<vector<double> > > spillovers(
+        num_spillover_steps_xy_ + 1, vector<vector<double> >(
+          num_spillover_steps_xy_ + 1, vector<double>(
+            num_spillover_steps_z_ + 1)));
+  for (int i = 0; i <= num_spillover_steps_xy_; ++i) {
+    const int i_dist_sq = pow(i, 2);
 
-    /*const int max_spillover =  2 * pow(num_spillover_steps_xy, 2);
-    vector<double> spillovers(max_spillover + 1);
-    for (int i = 0; i <= max_spillover; ++i) {
-      spillovers[i] = fast_functions_.getFastLog(exp(i * xy_exp_factor) + min_density);
-    }*/
+    for (int j = 0; j <= num_spillover_steps_xy_; ++j) {
+      const int j_dist_sq = pow(j, 2);
+      const double log_xy_density = (i_dist_sq + j_dist_sq) * xy_exp_factor;
 
-    //const int max_spillover =  2 * pow(num_spillover_steps_xy, 2);
+      for (int k = 0; k <= num_spillover_steps_z_; ++k) {
+        const int k_dist_sq = pow(k, 2);
+        const double log_z_density = k_dist_sq * z_exp_factor;
 
-    // For z_diff = 0;
-    vector<vector<double> > spillovers0(num_spillover_steps_xy + 1,
-        vector<double>(num_spillover_steps_xy + 1));
-    for (int i = 0; i <= num_spillover_steps_xy; ++i) {
-      const int i_dist_sq = pow(i,2);
-      for (int j = 0; j <= num_spillover_steps_xy; ++j) {
-        spillovers0[i][j] = fast_functions_.getFastLog(
-            exp((i_dist_sq + pow(j,2)) * xy_exp_factor)
-            + minDensity);
+        spillovers[i][j][k] = log(
+              exp(log_xy_density + log_z_density) + min_density_);
       }
     }
+  }
 
-    //For z_diff = 1;
-    vector<vector<double> > spillovers1(num_spillover_steps_xy + 1,
-        vector<double>(num_spillover_steps_xy + 1));
-    for (int i = 0; i <= num_spillover_steps_xy; ++i) {
-      const int i_dist_sq = pow(i,2);
-      for (int j = 0; j <= num_spillover_steps_xy; ++j) {
-        spillovers1[i][j] = fast_functions_.getFastLog(
-            exp((i_dist_sq + pow(j,2)) * xy_exp_factor + z_exp_factor)
-            + minDensity);
-      }
-    }
+  if (num_spillover_steps_z_ != 1) {
+    printf("Error - we assume that we are spilling exactly 1 in the"
+           "z-direction\n");
+  }
 
   // Build the density grid
   size_t num_points = points->size();
@@ -375,70 +391,51 @@ void DensityGridTracker::computeDensityGrid(
     const pcl::PointXYZRGB& pt = (*points)[i];
 
     // Find the indices for this point.
-    const int x_index = round(pt.x / xy_grid_step + x_offset);
-    const int y_index = round(pt.y / xy_grid_step + y_offset);
-    const int z_index = round(pt.z / z_grid_step + z_offset);
+    const int x_index = round(pt.x / xy_grid_step_ + x_offset);
+    const int y_index = round(pt.y / xy_grid_step_ + y_offset);
+    const int z_index = round(pt.z / z_grid_step_ + z_offset);
 
-    //int x_index, y_index, z_index;
-    //pointToIndex(pt, xy_grid_step, z_grid_step, x_offset, y_offset,
-    //    z_offset, &x_index, &y_index, &z_index);
+    // Spill the probability density into neighboring regions as a Guassian
+    // (but not to the borders, which represent the empty space around the
+    // tracked object)
+    const int max_x_index =
+        max(1, min(xSize_ - 2, x_index + num_spillover_steps_xy_));
+    const int max_y_index =
+        max(1, min(ySize_ - 2, y_index + num_spillover_steps_xy_));
 
-    const int z_spill = std::min(std::max(2, z_index), zSize_ - 3);
+    const int min_x_index =
+        min(xSize_ - 2, max(1, x_index - num_spillover_steps_xy_));
+    const int min_y_index =
+        min(ySize_ - 2, max(1, y_index - num_spillover_steps_xy_));
 
-    //if (num_spillover_steps_xy > 0 || num_spillover_steps_z > 0) {
-      // Spill over into neighboring regions (but not to the borders, which
-      // represent emptiness.
-      const int max_x_index = min(xSize_ - 2, x_index + num_spillover_steps_xy);
-      const int max_y_index = min(ySize_ - 2, y_index + num_spillover_steps_xy);
-      //const int max_z_index = min(zSize_ - 2, z_index + num_spillover_steps_z);
+    // For z, we only spill up one and down one, so pre-compute these.
+    const int z_spill = std::min(std::max(1, z_index), zSize_ - 2);
+    const int z_spill_up = std::min(z_spill + 1, zSize_ - 2);
+    const int z_spill_down = std::max(1, z_spill - 1);
 
-      const int min_x_index = max(1, x_index - num_spillover_steps_xy);
-      const int min_y_index = max(1, y_index - num_spillover_steps_xy);
-      //const int min_z_index = max(1, z_index - num_spillover_steps_z);
+    // Spill the probability into neighboring cells as a Guassian.
+    for (int x_spill = min_x_index; x_spill <= max_x_index; ++x_spill){
+      const int x_diff = abs(x_index - x_spill);
 
-      for (int x_spill = min_x_index; x_spill <= max_x_index; ++x_spill){
-        //const double x_distance_sq = pow(x_index - x_spill, 2);
-        const int x_diff = abs(x_index - x_spill);
+      for (int y_spill = min_y_index; y_spill <= max_y_index; ++y_spill) {
+        const int y_diff = abs(y_index - y_spill);
 
-        for (int y_spill = min_y_index; y_spill <= max_y_index; ++y_spill) {
-          const int y_diff = abs(y_index - y_spill);
+        const double spillover0 = spillovers[x_diff][y_diff][0];
 
-          //const double xy_grid_distance_sq = x_distance_sq + pow(y_index - y_spill, 2);
-          //const double spillover = spillovers[xy_grid_distance_sq];
+        density_grid_[x_spill][y_spill][z_spill] =
+            max(density_grid_[x_spill][y_spill][z_spill], spillover0);
 
-    /*for (int x_diff = 0; x_diff <= num_spillover_steps_xy; ++x_diff) {
-      for (int y_diff = 0; y_diff <= num_spillover_steps_xy; ++y_diff) {
+        const double spillover1 = spillovers[x_diff][y_diff][1];
 
-        const double spillover = spillovers2[x_diff][y_diff];
+        density_grid_[x_spill][y_spill][z_spill_up] =
+            max(density_grid_[x_spill][y_spill][z_spill_up], spillover1);
 
-        for (int x_mult = -1; x_mult <= 2; x_mult += 2) {
-          const int x_spill = max(1, min(xSize_ - 2, x_index + x_diff * x_mult));
+        density_grid_[x_spill][y_spill][z_spill_down] =
+            max(density_grid_[x_spill][y_spill][z_spill_down], spillover1);
 
-          for (int y_mult = -1; y_mult <= 2; y_mult += 2) {
-            const int y_spill = max(1, min(ySize_ - 2, y_index + y_diff * y_mult));
-
-            double& density_val = densityMap3D_[x_spill][y_spill][z_spill];
-
-            density_val = max(density_val, spillover);
-          }
-        }*/
-
-          const double spillover0 = spillovers0[x_diff][y_diff];
-
-          density_grid_[x_spill][y_spill][z_spill] =
-              max(density_grid_[x_spill][y_spill][z_spill], spillover0);
-
-          const double spillover1 = spillovers1[x_diff][y_diff];
-
-          density_grid_[x_spill][y_spill][z_spill+1] =
-              max(density_grid_[x_spill][y_spill][z_spill+1], spillover1);
-
-          density_grid_[x_spill][y_spill][z_spill-1] =
-              max(density_grid_[x_spill][y_spill][z_spill-1], spillover1);
-
-        }
       }
     }
+  }
 }
 
 double DensityGridTracker::getLogProbability(
@@ -450,50 +447,50 @@ double DensityGridTracker::getLogProbability(
 		const double x,
 		const double y,
     const double z) const {
+  // Amount of total log probability density for the given alignment.
+  double total_log_density = 0;
 
-	// Amount of total overlap.
-	double numOccupied = 0;
-
+  // Offset to apply to each point to get the new position.
 	const double x_offset = (x - minPt.x) / xy_gridStep;
 	const double y_offset = (y - minPt.y) / xy_gridStep;
   const double z_offset = (z - minPt.z) / z_gridStep;
 
-  // Iterate over every point, and look up its score in the density grid.
+  // Iterate over every point and look up its log probability density
+  // in the density grid.
 	const size_t num_points = current_points->size();
   for (size_t i = 0; i < num_points; ++i) {
-  	// Extract the point so we can compute its score.
+    // Extract the point so we can compute its probability.
   	const pcl::PointXYZRGB& pt = (*current_points)[i];
 
-    // Cut off indices at the limits.
-    const int x_index_shifted = min(max(0, static_cast<int>(round(pt.x / xy_gridStep + x_offset))), xSize_ - 1);;
-    const int y_index_shifted = min(max(0, static_cast<int>(round(pt.y / xy_gridStep + y_offset))), ySize_ - 1);
-    const int z_index_shifted = min(max(0, static_cast<int>(round(pt.z / z_gridStep + z_offset))), zSize_ - 1);
+    // We shift each point based on the proposed alignment, to try to
+    // align the current points with the previous points.  We then
+    // divide by the grid step to find the appropriate cell in the density
+    // grid.
+    const int x_index_shifted =
+        min(max(0, static_cast<int>(round(pt.x / xy_gridStep + x_offset))),
+            xSize_ - 1);
+    const int y_index_shifted =
+        min(max(0, static_cast<int>(round(pt.y / xy_gridStep + y_offset))),
+            ySize_ - 1);
+    const int z_index_shifted =
+        min(max(0, static_cast<int>(round(pt.z / z_gridStep + z_offset))),
+            zSize_ - 1);
 
-    /*if (z_index_shifted != 2) {
-      //printf("Scoring transform, point: %d, pt.z: %lf, z_index: %d\n", i, pt.z, z_index_shifted);
-    }*/
-
-    //printf("z_index_shifted: %d\n", z_index_shifted);
-
-    numOccupied += density_grid_[x_index_shifted][y_index_shifted][z_index_shifted];
+    // Look up the log density of this grid cell and add to the total density.
+    total_log_density +=
+        density_grid_[x_index_shifted][y_index_shifted][z_index_shifted];
   }
 
   // Compute the motion model probability.
   const double motion_model_prob = motion_model.computeScore(x, y, z);
 
   // Compute the log measurement probability.
-  const double log_measurement_prob = numOccupied;
+  const double log_measurement_prob = total_log_density;
 
   // Combine the motion model score with the (discounted) measurement score to
   // get the final log probability.
   const double log_prob =
-      log(motion_model_prob) + discount_factor_ * kMeasurementDiscountFactor * log_measurement_prob;
-
-  //printf("motion: %lf, discount: %lf, log_measurement: %lf\n", log(motion_model_prob),
-  //    discount_factor_ * kMeasurementDiscountFactor, log_measurement_prob);
-
-  //printf("motion_model_prob: %lf, log_measurement_prob: %lf\n",
-  //    motion_model_prob, log_measurement_prob);
+      log(motion_model_prob) + discount_factor_ * log_measurement_prob;
 
   return log_prob;
 }

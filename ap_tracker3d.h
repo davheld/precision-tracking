@@ -39,10 +39,8 @@ public:
 	    const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
 	    const Eigen::Vector3f &current_points_centroid,
 	    const MotionModel& motion_model,
-	    const int coarse_search_num_points,
 	    const double horizontal_distance,
 	    const double down_sample_factor_prev,
-	    const double point_ratio,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 private:
@@ -57,7 +55,6 @@ private:
       std::vector<XYZTransform>* new_xyz_transforms,
       double* total_recomputing_prob) const;
 
-  //NNTracker3d nn_tracker_;
   LFDiscrete3d& lf_discrete_3d_;
   DensityGridTracker& density_grid_tracker_;
   const FastFunctions& fast_functions_;

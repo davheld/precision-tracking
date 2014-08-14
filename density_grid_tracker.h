@@ -51,7 +51,6 @@ public:
       const MotionModel& motion_model,
       const double horizontal_distance,
       const double down_sample_factor,
-      const double point_ratio,
       ScoredTransforms<ScoredTransformXYZ>* transforms);
 
   // Score each ofthe xyz transforms.
@@ -65,7 +64,6 @@ public:
       const MotionModel& motion_model,
       const double horizontal_distance,
       const double down_sample_factor,
-      const double point_ratio,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   // Create a list of candidate xyz transforms.
@@ -87,7 +85,6 @@ private:
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
       const double xy_stepSize,
       const double z_stepSize,
-      const double point_ratio,
       const double horizontal_distance,
       const double down_sample_factor);
 
@@ -99,7 +96,7 @@ private:
   // Get the score of this transform, using the density grid.
   double getLogProbability(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const pcl::PointXYZRGB& minPt,
+      const pcl::PointXYZRGB& min_pt_,
       const double xy_gridStep,
       const double z_gridStep,
       const MotionModel& motion_model,
@@ -116,17 +113,14 @@ private:
 
   double discount_factor_;
 
-  pcl::PointXYZRGB minPt_;
-
-  double minDensity;
-  double xy_grid_step;
-  double z_grid_step;
-  pcl::PointXYZRGB minPt;
-  double spillover_sigma_xy;
-  double spillover_sigma_z;
-  int num_spillover_steps_xy;
-  int num_spillover_steps_z;
-
+  double min_density_;
+  double xy_grid_step_;
+  double z_grid_step_;
+  pcl::PointXYZRGB min_pt_;
+  double spillover_sigma_xy_;
+  double spillover_sigma_z_;
+  int num_spillover_steps_xy_;
+  int num_spillover_steps_z_;
 };
 
 

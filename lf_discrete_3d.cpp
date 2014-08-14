@@ -412,7 +412,6 @@ void LFDiscrete3d::track(
     const MotionModel& motion_model,
     const double horizontal_distance,
     const double down_sample_factor,
-    const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* transforms) {
 
   //printf("Xy step: %lf, z step: %lf\n", xy_stepSize, z_stepSize);
@@ -424,29 +423,25 @@ void LFDiscrete3d::track(
 
   // Get scores for each of the xyz transforms.
   scoreXYZTransforms(
-      current_points, current_points_centroid,
+      current_points,
       xy_stepSize, z_stepSize,
       xyz_transforms, motion_model, horizontal_distance, down_sample_factor,
-      point_ratio, transforms);
+      transforms);
 }
 
 void LFDiscrete3d::scoreXYZTransforms(
     const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
-    const Eigen::Vector3f &current_points_centroid,
     const double xy_stepSize,
     const double z_stepSize,
     const vector<XYZTransform>& transforms,
     const MotionModel& motion_model,
     const double horizontal_distance,
     const double down_sample_factor,
-    const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
   // Initialize variables for tracking grid.
   init(xy_stepSize, z_stepSize, horizontal_distance, down_sample_factor);
 
   const size_t num_transforms = transforms.size();
-
-  const double roll = 0, yaw = 0, pitch = 0;
 
   // Compute scores for all of the transforms using the occupancy map.
   scored_transforms->clear();

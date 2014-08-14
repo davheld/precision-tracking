@@ -9,7 +9,9 @@
 
 namespace {
 
-const bool useCeil = true; //getenv("USE_CEIL");
+// Whether to round up or down for deterministic downsampling when computing
+// how many points to skip.
+const bool kUseCeil = true;
 
 } // namespace
 
@@ -22,83 +24,66 @@ DownSampler::~DownSampler() {
   // TODO Auto-generated destructor stub
 }
 
-boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > DownSampler::downSamplePointsStochastic(
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > points,
-    const int& targetNumPoints) {
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > downSampledPoints(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-  if (targetNumPoints >= points->size() * 0.8){
-    //printf("Target num points: %d, num points in cloud: %zu - close enough\n", targetNumPoints, points->size());
-    return points;
-  }
-
-  //int n = 0;
-  //int everyN = static_cast<double>(points->size()) / targetNumPoints;
-  //PRINT_INFO("Taking every %d points", everyN);
-
-  //Just to ensure that we don't end up with 0 points, add 1 point to this
-  downSampledPoints->push_back(points->at(0));
-
-  int numPoints = points->size();
-
-  for (size_t i = 1; i < points->size(); i++){
-    //extract the point so we can compute the distance to the nearest neighbors
-    pcl::PointXYZRGB pt = points->at(i);
-    //if (n % everyN == 0){
-    if (rand() % numPoints < targetNumPoints){
-      downSampledPoints->push_back(pt);
-    }
-    //n++;
-  }
-
-  //printf("Target was %d points, down-sampled from %zu to %zu points\n", targetNumPoints, points->size(), downSampledPoints->size());
-
-  return downSampledPoints;
-}
-
-boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > DownSampler::downSamplePointsDeterministic(
-    const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > points,
-    const int& targetNumPoints) {
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > downSampledPoints(new pcl::PointCloud<pcl::PointXYZRGB>);
-
+void DownSampler::downSamplePointsStochastic(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
+    const int targetNumPoints,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints) {
   const size_t num_points = points->size();
 
+  // Check if the points are already sufficiently down-sampled.
   if (targetNumPoints >= num_points * 0.8){
-    //printf("Target num points: %d, num points in cloud: %zu - close enough\n", targetNumPoints, points->size());
-    return points;
+    *downSampledPoints = *points;
+    return;
   }
 
-  //PRINT_WARN("Use_ceil: %d", useCeil);
-
-  int everyN = 0;
-  if (useCeil) {
-    everyN = ceil(static_cast<double>(num_points) / static_cast<double>(targetNumPoints));
-  } else {
-    everyN = static_cast<double>(num_points) / static_cast<double>(targetNumPoints);
-  }
-
-  //PRINT_INFO("Taking every %d points", everyN);
-
-  // Allocate space.
+  // Allocate space for the new points.
   downSampledPoints->reserve(targetNumPoints);
 
   //Just to ensure that we don't end up with 0 points, add 1 point to this
-  downSampledPoints->push_back(points->at(0));
+  downSampledPoints->push_back((*points)[0]);
 
-  //int numPoints = points->size();
+  // Randomly select points with (targetNumPoints / num_points) probability.
+  for (size_t i = 1; i < num_points; ++i){
+    const pcl::PointXYZRGB& pt = (*points)[i];
+    if (rand() % num_points < targetNumPoints){
+      downSampledPoints->push_back(pt);
+    }
+  }
+}
 
-  int n = 0;
+void DownSampler::downSamplePointsDeterministic(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
+    const int targetNumPoints,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints) {
+  const size_t num_points = points->size();
+
+  // Check if the points are already sufficiently down-sampled.
+  if (targetNumPoints >= num_points * 0.8){
+    *downSampledPoints = *points;
+    return;
+  }
+
+  // Select every N points to reach the target number of points.
+  int everyN = 0;
+  if (kUseCeil) {
+    everyN = ceil(static_cast<double>(num_points) /
+                  static_cast<double>(targetNumPoints));
+  } else {
+    everyN = static_cast<double>(num_points) /
+        static_cast<double>(targetNumPoints);
+  }
+
+  // Allocate space for the new points.
+  downSampledPoints->reserve(targetNumPoints);
+
+  //Just to ensure that we don't end up with 0 points, add 1 point to this
+  downSampledPoints->push_back((*points)[0]);
+
+  // Select every N points to reach the target number of points.
   for (size_t i = 1; i < num_points; ++i) {
-    //extract the point so we can compute the distance to the nearest neighbors
-    if (n % everyN == 0){
-    //if (rand() % numPoints < targetNumPoints){
+    if (i % everyN == 0){
       const pcl::PointXYZRGB& pt = (*points)[i];
       downSampledPoints->push_back(pt);
     }
-    n++;
   }
-
-  //printf("Target was %d points, down-sampled from %zu to %zu points\n", targetNumPoints, num_points, downSampledPoints->size());
-
-  return downSampledPoints;
 }

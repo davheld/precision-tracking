@@ -9,18 +9,20 @@
 
 #include <boost/math/constants/constants.hpp>
 #include "down_sampler.h"
-#include "high_res_timer.h"
 
 namespace {
 
-const int kCurrFrameDownsample =
-    getenv("PROJECTION_SEARCH_NUM_POINTS") ? atoi(getenv("PROJECTION_SEARCH_NUM_POINTS")) : 150;
+// We downsample the current frame of the tracked object to have this many
+// points.
+const int kCurrFrameDownsample = 150;
 
-const double minXYStep = getenv("MIN_XY_STEP") ? atof(getenv("MIN_XY_STEP")) : 0.05;
+// We downsample the previous frame of the tracked object to have this many
+// points.
+const int kPrevFrameDownsample = 2000;
 
+// Whether to deterministically or stochastically downsample points from
+// the tracked object.
 const bool stochastic_downsample = false;
-
-const int kPrevFrameDownsample = getenv("FINE_SEARCH_NUM_POINTS") ? atoi(getenv("FINE_SEARCH_NUM_POINTS")) : 2000;
 
 // Set to 0 so we do not search over z (for objects moving in urban settings,
 // the vertical motion is small).
@@ -106,23 +108,20 @@ void PrecisionTracker::findBestLocation(
     const Eigen::Vector3f &current_points_centroid,
     const MotionModel& motion_model,
     const double down_sample_factor_prev,
-    const double point_ratio,
     const double horizontal_distance,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
   //down-sample to 150 pts
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > downSampledPoints1;
+  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > downSampledPoints1(new pcl::PointCloud<pcl::PointXYZRGB>);
   if (stochastic_downsample){
-    downSampledPoints1 = DownSampler::downSamplePointsStochastic(current_points, kCurrFrameDownsample);
+    DownSampler::downSamplePointsStochastic(current_points, kCurrFrameDownsample, downSampledPoints1);
   } else {
-    downSampledPoints1 = DownSampler::downSamplePointsDeterministic(current_points, kCurrFrameDownsample);
+    DownSampler::downSamplePointsDeterministic(current_points, kCurrFrameDownsample, downSampledPoints1);
   }
-
-  const int total_num_points = 0;
 
   ap_tracker3d_.track(max_xy_stepSize, max_z_stepSize, xRange, yRange, zRange,
       downSampledPoints1, prev_points, current_points_centroid,
-      motion_model, total_num_points, horizontal_distance,
-      down_sample_factor_prev, point_ratio, scored_transforms);
+      motion_model, horizontal_distance,
+      down_sample_factor_prev, scored_transforms);
 }
 
 
@@ -132,19 +131,13 @@ void PrecisionTracker::track(
     const double horizontal_distance,
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
-  // Ratio of the previous model size to the current model size.
-  // If less than 1, then this indicates the chance of a match to the current
-  // model.
-  // Example: If the previous model had 50 points and the current model has
-  // 200, the chance of a match is 50 / 200.  The chance of no match is 150 / 200.
-  const double point_ratio =
-      static_cast<double>(previousModel->size()) / current_points->size();
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previous_model_downsampled;
+  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previous_model_downsampled(new pcl::PointCloud<pcl::PointXYZRGB>);
   if (stochastic_downsample){
-    previous_model_downsampled = DownSampler::downSamplePointsStochastic(previousModel, kPrevFrameDownsample);
+    DownSampler::downSamplePointsStochastic(previousModel, kPrevFrameDownsample, previous_model_downsampled);
   } else {
-    previous_model_downsampled = DownSampler::downSamplePointsDeterministic(previousModel, kPrevFrameDownsample);
+    DownSampler::downSamplePointsDeterministic(previousModel, kPrevFrameDownsample, previous_model_downsampled);
   }
+
   const double down_sample_factor_prev =
       static_cast<double>(previous_model_downsampled->size()) /
       static_cast<double>(previousModel->size());
@@ -170,13 +163,13 @@ void PrecisionTracker::track(
   findBestLocation(current_points, stepSize, kZStepSize, xRange, yRange, zRange,
                    previous_model_downsampled,
       current_points_centroid, motion_model, down_sample_factor_prev,
-      point_ratio, horizontal_distance, scored_transforms);
+      horizontal_distance, scored_transforms);
 
 }
 
 Eigen::Matrix4f PrecisionTracker::estimateAlignmentCentroidDiff(
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > interpolatedColoredPointsPtr,
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previousModelPtr) {
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& interpolatedColoredPointsPtr,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModelPtr) {
   Eigen::Vector3f newCentroid;
   computeCentroid(interpolatedColoredPointsPtr, &newCentroid);
 
@@ -196,7 +189,7 @@ Eigen::Matrix4f PrecisionTracker::estimateAlignmentCentroidDiff(
 }
 
 void PrecisionTracker::computeCentroid(
-    const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > points,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
     Eigen::Vector3f* centroid) {
   *centroid = Eigen::Vector3f::Zero();
 

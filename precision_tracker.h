@@ -31,12 +31,12 @@ public:
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   static void computeCentroid(
-      const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
       Eigen::Vector3f* centroid);
 
   static Eigen::Matrix4f estimateAlignmentCentroidDiff(
-      boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > interpolatedColoredPointsPtr,
-      boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previousModelPtr);
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& interpolatedColoredPointsPtr,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModelPtr);
 
 private:
   void findBestLocation(
@@ -50,18 +50,12 @@ private:
       const Eigen::Vector3f &current_points_centroid,
       const MotionModel& motion_model,
       const double down_sample_factor_prev,
-      const double point_ratio,
       const double horizontal_distance,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
-  //APTracker ap_tracker2d_;
   APTracker3d ap_tracker3d_;
   //const FastFunctions& fast_functions_;
 
-  //LFDiscrete3d& lf_discrete_3d_;
-  //DensityGridTracker density_grid_tracker2d_;
-  //DensityGridTracker3d& density_grid_tracker3d_;
-  //NNTracker3d nn_tracker_;
 
 };
 

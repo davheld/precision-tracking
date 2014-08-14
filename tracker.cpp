@@ -140,7 +140,7 @@ int main(int argc, char **argv)
   // Structure for tracking.
   ModelBuilder aligner(false);
 
-  printf("Tracking objects - please wait...\n");
+  printf("Tracking objects - please wait...\n\n");
 
   HighResTimer hrt("Total time for tracking");
   hrt.start();

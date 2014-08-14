@@ -54,20 +54,17 @@ public:
       const MotionModel& motion_model,
       const double horizontal_distance,
       const double down_sample_factor,
-      const double point_ratio,
       ScoredTransforms<ScoredTransformXYZ>* transforms);
 
   // Score each ofthe xyz transforms.
   virtual void scoreXYZTransforms(
       const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
-      const Eigen::Vector3f &current_points_centroid,
       const double xy_stepSize,
       const double z_stepSize,
       const std::vector<XYZTransform>& transforms,
       const MotionModel& motion_model,
       const double horizontal_distance,
       const double down_sample_factor,
-      const double point_ratio,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   // Get the likelihood field score of the transform (x,y,z) applied to the

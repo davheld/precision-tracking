@@ -86,10 +86,8 @@ void APTracker3d::track(
     const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
     const Eigen::Vector3f &current_points_centroid,
     const MotionModel& motion_model,
-    const int coarse_search_num_points,
     const double horizontal_distance,
     const double down_sample_factor_prev,
-    const double point_ratio,
     ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) {
   const double kMaxXYStepSize = xy_step_size;
 
@@ -127,14 +125,14 @@ void APTracker3d::track(
     if (use_lf_tracker) {
       lf_discrete_3d_.track(current_xy_step_size, current_z_step_size, xRange, yRange, zRange,
           current_points, current_points_centroid,
-          motion_model, horizontal_distance, down_sample_factor_prev, point_ratio,
+          motion_model, horizontal_distance, down_sample_factor_prev,
           &scored_transforms3D);
     }
   } else {
     density_grid_tracker_.track(
         current_xy_step_size, current_z_step_size, xRange, yRange, zRange,
         current_points, prev_points, current_points_centroid,
-        motion_model, horizontal_distance, down_sample_factor_prev, point_ratio,
+        motion_model, horizontal_distance, down_sample_factor_prev,
         &scored_transforms3D);
   }
 
@@ -166,15 +164,15 @@ void APTracker3d::track(
       // Recompute some of the transforms at a higher resolution.
       if (k_NNTracking) {
           lf_discrete_3d_.scoreXYZTransforms(
-                  current_points, current_points_centroid,
+                  current_points,
                   new_xy_step_size, new_z_step_size, new_xyz_transforms, motion_model,
-                  horizontal_distance, down_sample_factor_prev, point_ratio,
+                  horizontal_distance, down_sample_factor_prev,
                   &scored_transforms3D);
       } else {
         density_grid_tracker_.scoreXYZTransforms(
             current_points, prev_points, current_points_centroid,
             new_xy_step_size, new_z_step_size, new_xyz_transforms, motion_model,
-            horizontal_distance, down_sample_factor_prev, point_ratio,
+            horizontal_distance, down_sample_factor_prev,
             &scored_transforms3D);
       }
 

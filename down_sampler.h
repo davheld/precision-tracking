@@ -8,7 +8,6 @@
 #ifndef DOWN_SAMPLER_H_
 #define DOWN_SAMPLER_H_
 
-#include <boost/shared_ptr.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
@@ -17,12 +16,19 @@ public:
   DownSampler();
   virtual ~DownSampler();
 
-  static boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > downSamplePointsStochastic(
-      boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > points,
-      const int& targetNumPoints);
-  static boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > downSamplePointsDeterministic(
-      const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > points,
-      const int& targetNumPoints);
+  // Randomly samples points from the input cloud to try to get the output
+  // to have as close as possible to targetNumPoints points.
+  static void downSamplePointsStochastic(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
+      const int targetNumPoints,
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints);
+
+  // Deterministically samples every N points from the input cloud to try to
+  // get the output to have as close as possible to targetNumPoints points.
+  static void downSamplePointsDeterministic(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
+      const int targetNumPoints,
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints);
 };
 
 #endif /* DOWN_SAMPLER_H_ */
