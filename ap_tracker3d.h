@@ -30,9 +30,9 @@ public:
 	virtual ~APTracker3d();
 
 	void track(
-	    const double& xy_step_size,
-	    const double& z_step_size,
-	    const std::pair <double, double>& xRange,
+      const double initial_xy_sampling_resolution,
+      const double initial_z_sampling_resolution,
+      const std::pair <double, double>& xRange,
 	    const std::pair <double, double>& yRange,
 	    const std::pair <double, double>& zRange,
 	    const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > current_points,
@@ -41,6 +41,8 @@ public:
 	    const MotionModel& motion_model,
 	    const double horizontal_distance,
 	    const double down_sample_factor_prev,
+      const double xy_sensor_resolution,
+      const double z_sensor_resolution,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 private:
@@ -50,7 +52,6 @@ private:
 
   void makeNewTransforms3D(
       const double new_xy_resolution, const double new_z_resolution,
-      const bool usekNN,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
       std::vector<XYZTransform>* new_xyz_transforms,
       double* total_recomputing_prob) const;

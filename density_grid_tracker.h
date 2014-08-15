@@ -3,24 +3,26 @@
  *
  *  Created on: Sep 1, 2013
  *      Author: davheld
+ *
+ * Compute the probability of a given set of alignments.
+ * To do this quickly, we pre-cache probability values in a density grid for
+ * fast lookups.
+ *
  */
 
 #ifndef DENSITY_GRID_TRACKER_H_
 #define DENSITY_GRID_TRACKER_H_
 
-#include <utility>
 #include <vector>
 
-#include <boost/shared_ptr.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-#include "motion_model.h"
 #include "scored_transform.h"
-#include "fast_functions.h"
 
 
 struct ScoredTransform;
 struct XYZTransform;
+class MotionModel;
 
 // Singleton Class.
 class DensityGridTracker {
@@ -40,8 +42,8 @@ public:
   // A rotation step size, and a range for each rotation value
   // (min value, max value) in meters.
   void track(
-      const double xy_stepSize,
-      const double z_stepSize,
+      const double xy_sampling_resolution,
+      const double z_sampling_resolution,
       const std::pair <double, double>& xRange,
       const std::pair <double, double>& yRange,
       const std::pair <double, double>& zRange,
@@ -49,27 +51,26 @@ public:
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
       const Eigen::Vector3f& current_points_centroid,
       const MotionModel& motion_model,
-      const double horizontal_distance,
-      const double down_sample_factor,
+      const double xy_sensor_resolution,
+      const double z_sensor_resolution,
       ScoredTransforms<ScoredTransformXYZ>* transforms);
 
   // Score each ofthe xyz transforms.
   void scoreXYZTransforms(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-      const Eigen::Vector3f& current_points_centroid,
-      const double xy_stepSize,
-      const double z_stepSize,
+      const double xy_sampling_resolution,
+      const double z_sampling_resolution,
       const std::vector<XYZTransform>& transforms,
       const MotionModel& motion_model,
-      const double horizontal_distance,
-      const double down_sample_factor,
+      const double xy_sensor_resolution,
+      const double z_sensor_resolution,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   // Create a list of candidate xyz transforms.
   static void createCandidateXYZTransforms(
-      const double xy_step_size,
-      const double z_step_size,
+      const double xy_sampling_resolution,
+      const double z_sampling_resolution,
       const std::pair <double, double>& xRange,
       const std::pair <double, double>& yRange,
       const std::pair <double, double>& zRange,
@@ -77,26 +78,17 @@ public:
 
 private:
   DensityGridTracker();
-  DensityGridTracker(DensityGridTracker const&);              // Don't Implement.
+  DensityGridTracker(DensityGridTracker const&); // Don't Implement.
   void operator=(DensityGridTracker const&); // Don't implement
 
-  /*void FillGridOneZ(
-      const int x_index, const int y_index,
-      const int min_x_index, const int min_y_index,
-      const int max_x_index, const int max_y_index,
-      const int z_index,
-      const std::vector<std::vector<std::vector<double> > >& spillovers);*/
-
-  // Determine the size and minimum density for the density grid.
-  void computeDensityGridSize(
+  void computeDensityGridParameters(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-      const double xy_stepSize,
-      const double z_stepSize,
-      const double horizontal_distance,
-      const double down_sample_factor);
+      const double xy_sampling_resolution,
+      const double z_sampling_resolution,
+      const double xy_sensor_resolution,
+      const double z_sensor_resolution);
 
-  // Given a set of points, and the minimum point in the set,
-  // Compute a 3D density grid.
+  // Pre-cache probability values in a density grid for fast lookups.
   void computeDensityGrid(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points);
 
@@ -111,21 +103,37 @@ private:
       const double y,
       const double z) const;
 
-  const FastFunctions& fast_functions_;
-
+  // A grid used to pre-cache probability values for fast lookups.
   std::vector<std::vector<std::vector<double> >  > density_grid_;
+
+  // The size of the resulting grid.
   int xSize_;
   int ySize_;
   int zSize_;
 
+  // How much to discount the measurement model, based on dependencies
+  // between points.
   double discount_factor_;
 
+  // The minimum probability density in the density grid.
   double min_density_;
+
+  // The step size of the density grid.
   double xy_grid_step_;
   double z_grid_step_;
+
+  // The minimum point of the previous set of points used for tracking.
   pcl::PointXYZRGB min_pt_;
-  double spillover_sigma_xy_;
-  double spillover_sigma_z_;
+
+  // The variance of the points for alignment.
+  double sigma_xy_;
+  double sigma_z_;
+
+  // In our discrete grid, we want to compute the Gaussian probability
+  // for this many grid cells away from each point.  As we get farther
+  // away from the point, the probability of the Guassian goes to 0
+  // so we only need to compute the probability at a limited number
+  // of grid cells for each point.
   int num_spillover_steps_xy_;
   int num_spillover_steps_z_;
 };

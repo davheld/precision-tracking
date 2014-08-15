@@ -10,8 +10,6 @@
 #include <vector>
 #include <algorithm>
 
-#include <boost/math/constants/constants.hpp>
-
 #include "density_grid_tracker.h"
 #include "scored_transform.h"
 
@@ -20,30 +18,29 @@ using std::max;
 
 namespace {
 
-const bool k_NNTracking = false;
+// Whether to use the density grid tracker (pre-caching) or the lf_tracker
+// (post-caching).
 const bool use_lf_tracker = false;
 
-//const double min_transforms = getenv("MIN_TRANSFORMS") ? atoi(getenv("MIN_TRANSFORMS")) : 1;
+// We compute the minimum sampling resolution based on the sensor
+// resolution - we are limited in accuracy by the sensor resolution,
+// so there is no point in sampling at a much finer scale.
+// The minimum sampling resolution is set to be no smaller than
+// sensor_resolution / kMinResFactor.
+const double kMinResFactor = 1;
 
-const double pi = boost::math::constants::pi<double>();
+// The desired sampling resolution.
+const double kDesiredSamplingResolution = 0.05;
 
-const double kMinResFactor = getenv("MIN_RES_FACTOR") ? atof(getenv("MIN_RES_FACTOR")) : 1;
+// How much to reduce the sampling resolution each iteration.
+const double kReductionFactor = 3;
 
-const bool kSearchYaw = false;
+// Set this to limit the maximum number of transforms that we
+// evaluate at each iteration beyond the first.
+const size_t kMaxNumTransforms = 0;
 
-const double kMaxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 1;
-
-const double kMinXYStep = getenv("MIN_XY_STEP") ? atof(getenv("MIN_XY_STEP")) : 0.05;
-
-const double kReductionFactor = getenv("REDUCTION_FACTOR") ? atof(getenv("REDUCTION_FACTOR")) : 3;
-
-const size_t kMaxNumTransformsActual = getenv("MAX_NUM_ACTUAL") ? atoi(getenv("MAX_NUM_ACTUAL")) : 0;
-
-const double kMaxNumTransformsKNN = getenv("NN_MAX_NUM_TRANSFORMS") ?
-    atoi(getenv("NN_MAX_NUM_TRANSFORMS")) : 10000;
-
-const double kMaxNumTransformsGrid = getenv("MAX_NUM_TRANSFORMS") ?
-    atoi(getenv("MAX_NUM_TRANSFORMS")) : 10000;
+// Only divide cells whose probabilities are greater than kMinProb.
+const double kMinProb = 0.0001;
 
 } // namespace
 
@@ -61,24 +58,27 @@ APTracker3d::~APTracker3d() {
 void APTracker3d::recomputeProbs(
     const double prior_prob,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const {
+  // Get the conditional probabilities for the region that we subdivided,
+  // p(Cell | Region)
   const std::vector<double>& conditional_probs =
       scored_transforms->getNormalizedProbs();
 
   std::vector<ScoredTransformXYZ>& scored_transforms_vect =
       scored_transforms->getScoredTransforms();
 
+  // Compute the joint probability of each cell and the region.
   size_t num_probs = conditional_probs.size();
-
   for (size_t i = 0; i < num_probs; ++i) {
-    const double& conditional_prob = conditional_probs[i];
+    const double conditional_prob = conditional_probs[i];
+    // P(Cell, Region) = p(Region) p(Cell | Region)
     const double new_log_prob = log(prior_prob * conditional_prob);
     scored_transforms_vect[i].setUnnormalizedLogProb(new_log_prob);
   }
 }
 
 void APTracker3d::track(
-    const double& xy_step_size,
-    const double& z_step_size,
+    const double initial_xy_sampling_resolution,
+    const double initial_z_sampling_resolution,
     const std::pair <double, double>& xRange,
     const std::pair <double, double>& yRange,
     const std::pair <double, double>& zRange,
@@ -88,91 +88,77 @@ void APTracker3d::track(
     const MotionModel& motion_model,
     const double horizontal_distance,
     const double down_sample_factor_prev,
+    const double xy_sensor_resolution,
+    const double z_sensor_resolution,
     ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) {
-  const double kMaxXYStepSize = xy_step_size;
+  // Compute the minimum sampling resolution based on the sensor
+  // resolution - we are limited in accuracy by the sensor resolution,
+  // so there is no point in sampling at a much finer scale.
+  const double min_xy_sampling_resolution =
+      max(xy_sensor_resolution / kMinResFactor, kDesiredSamplingResolution);
 
-  // Compute the sensor horizontal resolution
-  //const double velodyne_horizontal_res = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+  // Initialize the sampling resolution.
+  double current_xy_sampling_resolution = initial_xy_sampling_resolution;
+  double current_z_sampling_resolution = initial_z_sampling_resolution;
 
-  // Compute the sensor horizontal resolution.
-  const double velodyne_horizontal_res_actual = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
-
-  // The effective resolution = resolution / downsample factor.
-  const double velodyne_horizontal_res = velodyne_horizontal_res_actual / down_sample_factor_prev;
-
-  const double kMinXYStepSize =
-      max(velodyne_horizontal_res / kMinResFactor, kMinXYStep);
-
-  // Place to store the final scored transforms.
-  //ScoredTransforms<ScoredTransformXYZ> final_scored_transforms3D;
-
-  // Initialize the xy step size to the max.
-  double current_xy_step_size = kMaxXYStepSize;
-
-  // Based on the ratio of horizontal to vertical resolution.
-  double current_z_step_size = 2.2 * kMaxXYStepSize;
-  //double current_z_step_size = kMaxXYStepSize;
-  //double current_z_step_size = 0.5;
-
-  // Track at a low resolution, get a score for various 2D transforms.
+  // Our most recently scored transforms.
   ScoredTransforms<ScoredTransformXYZ> scored_transforms3D;
 
-  if (k_NNTracking && use_lf_tracker) {
+  // Initially track at a coarse resolution and get a score for various transforms.
+  if (use_lf_tracker) {
     lf_discrete_3d_.setPrevPoints(prev_points);
-  }
 
-  if (k_NNTracking) {
-    if (use_lf_tracker) {
-      lf_discrete_3d_.track(current_xy_step_size, current_z_step_size, xRange, yRange, zRange,
-          current_points, current_points_centroid,
-          motion_model, horizontal_distance, down_sample_factor_prev,
-          &scored_transforms3D);
-    }
-  } else {
-    density_grid_tracker_.track(
-        current_xy_step_size, current_z_step_size, xRange, yRange, zRange,
-        current_points, prev_points, current_points_centroid,
+    lf_discrete_3d_.track(current_xy_sampling_resolution, current_z_sampling_resolution, xRange, yRange, zRange,
+        current_points, current_points_centroid,
         motion_model, horizontal_distance, down_sample_factor_prev,
         &scored_transforms3D);
+  } else {
+    density_grid_tracker_.track(
+          current_xy_sampling_resolution, current_z_sampling_resolution,
+          xRange, yRange, zRange,
+          current_points, prev_points, current_points_centroid,
+          motion_model, xy_sensor_resolution, z_sensor_resolution,
+          &scored_transforms3D);
   }
 
-  // Recompute the probability of each of these transforms using the prior
-  // probability.
+  // Normalize the probabilities so they sum to 1.
   recomputeProbs(1, &scored_transforms3D);
 
-  // Save previous output (the part that we are not recomputing) to the
-  // final scored transforms.
+  // Save the previous output to the final scored transforms.
   final_scored_transforms3D->addScoredTransforms(scored_transforms3D);
 
-  while (current_xy_step_size > kMinXYStepSize) {
+  while (current_xy_sampling_resolution > min_xy_sampling_resolution) {
     // To get the new positions, offset each old position by the old position
     // by the old resolution / 4 (we divide each grid cell into 4 blocks).
-    const double new_xy_step_size = current_xy_step_size / kReductionFactor;
-    const double new_z_step_size = current_z_step_size / kReductionFactor;
+    const double new_xy_sampling_resolution =
+        current_xy_sampling_resolution / kReductionFactor;
+    const double new_z_sampling_resolution =
+        current_z_sampling_resolution / kReductionFactor;
 
     // Make new transforms at a higher resolution.
     vector<XYZTransform> new_xyz_transforms;
     // Keep track of the total probability of the region that we are recomputing
     // the probability of.
     double total_recomputing_prob;
-    makeNewTransforms3D(new_xy_step_size, new_z_step_size, k_NNTracking,
-        final_scored_transforms3D, &new_xyz_transforms,
-        &total_recomputing_prob);
+    makeNewTransforms3D(
+          new_xy_sampling_resolution, new_z_sampling_resolution,
+          final_scored_transforms3D, &new_xyz_transforms,
+          &total_recomputing_prob);
 
     if (new_xyz_transforms.size() > 0) {
       scored_transforms3D.clear();
       // Recompute some of the transforms at a higher resolution.
-      if (k_NNTracking) {
+      if (use_lf_tracker) {
           lf_discrete_3d_.scoreXYZTransforms(
                   current_points,
-                  new_xy_step_size, new_z_step_size, new_xyz_transforms, motion_model,
+                  new_xy_sampling_resolution, new_z_sampling_resolution, new_xyz_transforms, motion_model,
                   horizontal_distance, down_sample_factor_prev,
                   &scored_transforms3D);
       } else {
         density_grid_tracker_.scoreXYZTransforms(
-            current_points, prev_points, current_points_centroid,
-            new_xy_step_size, new_z_step_size, new_xyz_transforms, motion_model,
-            horizontal_distance, down_sample_factor_prev,
+            current_points, prev_points,
+            new_xy_sampling_resolution, new_z_sampling_resolution, new_xyz_transforms, motion_model,
+            xy_sensor_resolution, z_sensor_resolution,
             &scored_transforms3D);
       }
 
@@ -183,53 +169,13 @@ void APTracker3d::track(
       // Add the previous output to the final scored transforms.
       final_scored_transforms3D->addScoredTransforms(scored_transforms3D);
 
-      current_xy_step_size = new_xy_step_size;
-      current_z_step_size = new_z_step_size;
+      current_xy_sampling_resolution = new_xy_sampling_resolution;
+      current_z_sampling_resolution = new_z_sampling_resolution;
 
     } else {
       break;
     }
   }
-
-  /*if (kSearchYaw) {
-    ScoredTransformXYZ best_transform;
-    double best_transform_prob;
-    final_scored_transforms3D->findBest(&best_transform, &best_transform_prob);
-
-    /*Eigen::Vector4d centroid4d = Eigen::Vector4d::Zero();
-    centroid4d(0) = current_points_centroid(0);
-    centroid4d(1) = current_points_centroid(1);
-    centroid4d(2) = current_points_centroid(2);
-    centroid4d(3) = 1;
-
-    const double time_diff = 0.1;
-
-    Eigen::Vector3d mean_velocity = motion_model.computeMeanVelocity(*final_scored_transforms3D,
-        centroid4d, time_diff);
-
-    const double x = mean_velocity(0) * time_diff;
-    const double y = mean_velocity(1) * time_diff;
-    const double z = mean_velocity(2) * time_diff;
-
-    ScoredTransformXYZ mean_transform(x, y, z, 0, 0, 0, 0, 1);*/
-
-    /*nn_tracker_.findYaw(
-        current_points, prev_points,
-        current_xy_step_size, current_z_step_size,
-        current_points_centroid,
-        best_transform,
-        motion_model,
-        horizontal_distance, down_sample_factor_prev, point_ratio,
-        &scored_transforms3D);
-
-    recomputeProbs(best_transform_prob, &scored_transforms3D);
-
-    // Add the previous output to the final scored transforms.
-    final_scored_transforms3D->clear();
-    final_scored_transforms3D->addScoredTransforms(scored_transforms3D);
-  }*/
-
-  //showScoredTransforms(final_scored_transforms2D);
 }
 
 bool compareTransforms1(const ScoredTransformXYZ& transform_i,
@@ -239,14 +185,14 @@ bool compareTransforms1(const ScoredTransformXYZ& transform_i,
 
 // Decreases the resolution of all grid cells above a certain threshold probability.
 void APTracker3d::makeNewTransforms3D(
-    const double xy_offset, const double z_offset, const bool usekNN,
+    const double xy_offset, const double z_offset,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
     std::vector<XYZTransform>* new_xyz_transforms,
     double* total_recomputing_prob) const {
   std::vector<ScoredTransformXYZ>& scored_transforms_xyz =
       scored_transforms->getScoredTransforms();
 
-  if (kMaxNumTransformsActual > 0) {
+  if (kMaxNumTransforms > 0) {
     std::sort(scored_transforms_xyz.begin(), scored_transforms_xyz.end(),
       compareTransforms1);
   }
@@ -287,21 +233,10 @@ void APTracker3d::makeNewTransforms3D(
 
   double prob_sum = 0;
 
-  int kMaxNumTransforms;
-  if (usekNN) {
-    kMaxNumTransforms = kMaxNumTransformsKNN;
-  } else {
-    kMaxNumTransforms = kMaxNumTransformsGrid;
-  }
-
-  // Only recompute probabilities that are greater than min_prob.
-  const double min_prob = kMaxNumTransforms == 0 ? 0 : 1.0 / kMaxNumTransforms;
-  //const double min_prob = 0;
-
   const std::vector<double>& probs = scored_transforms->getNormalizedProbs();
 
   // Allocate space for the new transforms that we will recompute.
-  const size_t max_num_transforms = kMaxNumTransformsActual > 0 ? std::min(probs.size(), kMaxNumTransformsActual) : probs.size();
+  const size_t max_num_transforms = kMaxNumTransforms > 0 ? std::min(probs.size(), kMaxNumTransforms) : probs.size();
   new_xyz_transforms->clear();
   new_xyz_transforms->reserve(max_num_transforms);
 
@@ -317,7 +252,8 @@ void APTracker3d::makeNewTransforms3D(
     const double old_y = old_scored_transform.getY();
     const double old_z = old_scored_transform.getZ();
 
-    if (probs[i] > min_prob) {
+    // Only divide cells whose probabilities are greater than kMinProb.
+    if (probs[i] > kMinProb) {
       *total_recomputing_prob += probs[i];
 
       to_remove.push_back(i);

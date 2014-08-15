@@ -26,15 +26,19 @@ const bool stochastic_downsample = false;
 
 // Set to 0 so we do not search over z (for objects moving in urban settings,
 // the vertical motion is small).
-const double maxZ = getenv("MAX_Z") ? atof(getenv("MAX_Z")) : 1;
+const double maxZ = 0;
 
-const double maxXY = getenv("MAX_XY") ? atof(getenv("MAX_XY")) : 2;
+// We expect the actual motion of the previous centroid to be
+// this far off from the measured displacement of the centroid (due to
+// occlusions and viewpoint changes).  Roughly, we set this to be equal
+// to half of the expected size of the tracked object.
+const double maxXY = 2;
 
-const double stepSize =
-    getenv("STEP_SIZE") ? atof(getenv("STEP_SIZE")) : 1;
+// Start with a very coarse xy sampling for efficiency.
+const double kInitialXYSamplingResolution = 1;
 
-const double kZStepSize =
-    getenv("Z_STEP_SIZE") ? atof(getenv("Z_STEP_SIZE")) : 0.5;
+// Do not sample in the z-direction - assume minimal vertical motion.
+const double kInitialZSamplingResolution = 0;
 
 const double pi = boost::math::constants::pi<double>();
 
@@ -99,8 +103,8 @@ PrecisionTracker::~PrecisionTracker() {
 //best, min, max, stepsize, numsteps?
 void PrecisionTracker::findBestLocation(
     boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
-    const double max_xy_stepSize,
-    const double max_z_stepSize,
+    const double initial_xy_sampling_resolution,
+    const double initial_z_sampling_resolution,
     pair <double, double> xRange,
     pair <double, double> yRange,
     pair <double, double> zRange,
@@ -118,10 +122,26 @@ void PrecisionTracker::findBestLocation(
     DownSampler::downSamplePointsDeterministic(current_points, kCurrFrameDownsample, downSampledPoints1);
   }
 
-  ap_tracker3d_.track(max_xy_stepSize, max_z_stepSize, xRange, yRange, zRange,
-      downSampledPoints1, prev_points, current_points_centroid,
-      motion_model, horizontal_distance,
-      down_sample_factor_prev, scored_transforms);
+  // TODO - pass this as an input parameter.
+  // Compute the sensor horizontal resolution
+  const double velodyne_horizontal_res_actual = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+
+  // The effective resolution = resolution / downsample factor.
+  const double velodyne_horizontal_res = velodyne_horizontal_res_actual / down_sample_factor_prev;
+
+  // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
+  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
+
+  // For efficiency, we assume no motion in the z-direction.
+
+  ap_tracker3d_.track(
+        initial_xy_sampling_resolution, initial_z_sampling_resolution,
+        xRange, yRange, zRange,
+        downSampledPoints1, prev_points, current_points_centroid,
+        motion_model, horizontal_distance,
+        down_sample_factor_prev,
+        velodyne_horizontal_res, velodyne_vertical_res,
+        scored_transforms);
 }
 
 
@@ -151,7 +171,8 @@ void PrecisionTracker::track(
   const double y_init = centroidDiffTransform(1,3);
 
   // TODO - set this to zero.
-  const double z_init = centroidDiffTransform(2,3);
+  // Assume that the vertical motion is minimal.
+  const double z_init = 0; // centroidDiffTransform(2,3);
 
   pair <double, double> xRange (-maxX + x_init, maxX + x_init);
   pair <double, double> yRange (-maxY + y_init, maxY + y_init);
@@ -160,7 +181,7 @@ void PrecisionTracker::track(
   Eigen::Vector3f current_points_centroid;
   computeCentroid(current_points, &current_points_centroid);
 
-  findBestLocation(current_points, stepSize, kZStepSize, xRange, yRange, zRange,
+  findBestLocation(current_points, kInitialXYSamplingResolution, kInitialZSamplingResolution, xRange, yRange, zRange,
                    previous_model_downsampled,
       current_points_centroid, motion_model, down_sample_factor_prev,
       horizontal_distance, scored_transforms);

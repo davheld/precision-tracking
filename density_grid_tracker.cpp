@@ -9,7 +9,6 @@
 
 #include <stdlib.h>
 #include <numeric>
-#include <boost/math/constants/constants.hpp>
 
 #include <pcl/common/common.h>
 
@@ -51,8 +50,6 @@ const double kMeasurementDiscountFactor = 1;
 
 const bool k_NNTracking = false;
 
-const double pi = boost::math::constants::pi<double>();
-
 // Total size = 3.7 GB
 // At a resolution of 1.2 cm, a 10 m wide object will take 1000 cells.
 const int kMaxXSize = k_NNTracking ? 1 : 1000;
@@ -70,8 +67,7 @@ using std::min;
 // Initialize the density grid to all have log(kSmoothingFactor), so we do
 // not give a probability of 0 to any location.
 DensityGridTracker::DensityGridTracker()
-  : fast_functions_(FastFunctions::getInstance()),
-    density_grid_(kMaxXSize, vector<vector<double> >(
+  : density_grid_(kMaxXSize, vector<vector<double> >(
         kMaxYSize, vector<double>(kMaxZSize, log(kSmoothingFactor)))) {
 }
 
@@ -80,8 +76,8 @@ DensityGridTracker::~DensityGridTracker() {
 }
 
 void DensityGridTracker::track(
-    const double xy_stepSize,
-    const double z_stepSize,
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
     const pair <double, double>& xRange,
     const pair <double, double>& yRange,
     const pair <double, double>& zRange,
@@ -89,127 +85,113 @@ void DensityGridTracker::track(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
     const Eigen::Vector3f& current_points_centroid,
 		const MotionModel& motion_model,
-		const double horizontal_distance,
-		const double down_sample_factor,
+    const double xy_sensor_resolution,
+    const double z_sensor_resolution,
     ScoredTransforms<ScoredTransformXYZ>* transforms) {
 	// Find all candidate xyz transforms.
   vector<XYZTransform> xyz_transforms;
-  createCandidateXYZTransforms(xy_stepSize, z_stepSize,
+  createCandidateXYZTransforms(xy_sampling_resolution, z_sampling_resolution,
       xRange, yRange, zRange, &xyz_transforms);
 
   // Get scores for each of the xyz transforms.
   scoreXYZTransforms(
-  		current_points, prev_points, current_points_centroid,
-  		xy_stepSize, z_stepSize,
-  		xyz_transforms, motion_model, horizontal_distance, down_sample_factor,
+      current_points, prev_points,
+      xy_sampling_resolution, z_sampling_resolution,
+      xyz_transforms, motion_model, xy_sensor_resolution, z_sensor_resolution,
       transforms);
 }
 
 void DensityGridTracker::createCandidateXYZTransforms(
-    const double xy_step_size,
-    const double z_step_size,
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
     const std::pair <double, double>& xRange,
     const std::pair <double, double>& yRange,
     const std::pair <double, double>& zRange_orig,
     std::vector<XYZTransform>* transforms) {
-  std::pair<double, double> zRange;
-  if (z_step_size > fabs(zRange_orig.first)) {
-    zRange.first = 0;
-    zRange.second = 0;
-  } else {
-    zRange.first = zRange_orig.first;
-    zRange.second = zRange_orig.second;
+  if (xy_sampling_resolution == 0) {
+    printf("Error - xy sampling resolution must be > 0");
+    exit(1);
   }
 
-  //printf("xRange: %lf to %lf, stepSize: %lf\n",  xRange.first,  xRange.second, xy_step_size);
-  //printf("yRange: %lf to %lf, stepSize: %lf\n",  yRange.first,  yRange.second, xy_step_size);
-  //printf("zRange: %lf to %lf, stepSize: %lf\n",  zRange.first,  zRange.second, z_step_size);
-
-  // Compute the number of transforms along each direction.
-  const int num_x_locations = (xRange.second - xRange.first) / xy_step_size;
-  const int num_y_locations = (yRange.second - yRange.first) / xy_step_size;
-  int num_z_locations;
-  if (z_step_size == 0) {
-    num_z_locations = 1;
-  } else {
-    num_z_locations = (zRange.second - zRange.first) / z_step_size;
-  }
-
-  // Reserve space for all of the transforms.
-  transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
-
-  const double volume = pow(xy_step_size, 2) * z_step_size;
-
-  // Create a list of candidate transforms.
-  for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
-    for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
-      XYZTransform transform(x, y, 0, volume);
-      transforms->push_back(transform);
+  if (z_sampling_resolution == 0) {
+    if (zRange_orig.first != zRange_orig.second) {
+      printf("Error - z_sampling_resolution = 0 but the z range"
+             "is %lf to %lf\n", zRange_orig.first, zRange_orig.second);
     }
-  }
 
+    // Since our z sampling resolution is 0, set the z value for all samples.
+    const double z = zRange_orig.first;
 
-  /*if (xy_step_size == 0) {
-    printf("Error - xy step size must be > 0");
-    exit(1);
-  }
+    // Compute the number of transforms along each direction.
+    const int num_x_locations = (xRange.second - xRange.first) / xy_sampling_resolution + 1;
+    const int num_y_locations = (yRange.second - yRange.first) / xy_sampling_resolution + 1;
 
-  if (z_step_size == 0) {
-    printf("Error - z step size must be > 0");
-    exit(1);
-  }
+    // Reserve space for all of the transforms.
+    transforms->reserve(num_x_locations * num_y_locations);
 
-  // Make sure we hit 0 in our z range, in case the step is too large.
-  std::pair<double, double> zRange;
-  if (z_step_size > fabs(zRange.second - zRange_orig.first)) {
-    zRange.first = 0;
-    zRange.second = 0;
-  } else {
-    zRange.first = zRange_orig.first;
-    zRange.second = zRange_orig.second;
-  }
+    // In this case, the volume is actually an area since we are only
+    // sampling in the x and y dimensions.
+    const double volume = pow(xy_sampling_resolution, 2);
 
-  // Compute the number of transforms along each direction.
-  const int num_x_locations = (xRange.second - xRange.first) / xy_step_size + 1;
-  const int num_y_locations = (yRange.second - yRange.first) / xy_step_size + 1;
-  const int num_z_locations = (zRange.second - zRange.first) / z_step_size + 1;
-
-  // Reserve space for all of the transforms.
-  transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
-
-  const double volume = pow(xy_step_size, 2) * z_step_size;
-
-  // Create a list of candidate transforms.
-  for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
-    for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
-      for (double z = zRange.first; z <= zRange.second; z +=z_step_size){
+    // Create candidate transforms.  We only sample in the horizontal direction.
+    for (double x = xRange.first; x <= xRange.second; x += xy_sampling_resolution) {
+      for (double y = yRange.first; y <= yRange.second; y += xy_sampling_resolution) {
         XYZTransform transform(x, y, z, volume);
         transforms->push_back(transform);
       }
     }
-  }*/
+  } else {
+    // Make sure we hit 0 in our z range, in case the sampling resolution
+    // is too large.
+    std::pair<double, double> zRange;
+    if (z_sampling_resolution > fabs(zRange_orig.second - zRange_orig.first)) {
+      zRange.first = 0;
+      zRange.second = 0;
+    } else {
+      zRange.first = zRange_orig.first;
+      zRange.second = zRange_orig.second;
+    }
+
+    // Compute the number of transforms along each direction.
+    const int num_x_locations = (xRange.second - xRange.first) / xy_sampling_resolution + 1;
+    const int num_y_locations = (yRange.second - yRange.first) / xy_sampling_resolution + 1;
+    const int num_z_locations = (zRange.second - zRange.first) / z_sampling_resolution + 1;
+
+    // Reserve space for all of the transforms.
+    transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
+
+    const double volume = pow(xy_sampling_resolution, 2) * z_sampling_resolution;
+
+    // Create candidate transforms.
+    for (double x = xRange.first; x <= xRange.second; x += xy_sampling_resolution) {
+      for (double y = yRange.first; y <= yRange.second; y += xy_sampling_resolution) {
+        for (double z = zRange.first; z <= zRange.second; z += z_sampling_resolution) {
+          XYZTransform transform(x, y, z, volume);
+          transforms->push_back(transform);
+        }
+      }
+    }
+  }
 }
 
 void DensityGridTracker::scoreXYZTransforms(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-    const Eigen::Vector3f& current_points_centroid,
-    const double xy_stepSize,
-    const double z_stepSize,
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
     const vector<XYZTransform>& transforms,
     const MotionModel& motion_model,
-    const double horizontal_distance,
-    const double down_sample_factor,
+    const double xy_sensor_resolution,
+    const double z_sensor_resolution,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
-  // Determine the size and minimum density for the density grid.
-  computeDensityGridSize(prev_points, xy_stepSize, z_stepSize,
-      horizontal_distance, down_sample_factor);
+  computeDensityGridParameters(
+        prev_points, xy_sampling_resolution, z_sampling_resolution,
+        xy_sensor_resolution, z_sensor_resolution);
 
   computeDensityGrid(prev_points);
 
-  const size_t num_transforms = transforms.size();
-
   // Compute scores for all of the transforms using the density grid.
+  const size_t num_transforms = transforms.size();
   scored_transforms->clear();
   scored_transforms->reserve(num_transforms);
   for(size_t i = 0; i < num_transforms; ++i){
@@ -228,15 +210,17 @@ void DensityGridTracker::scoreXYZTransforms(
   }
 }
 
-void DensityGridTracker::computeDensityGridSize(
+void DensityGridTracker::computeDensityGridParameters(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-    const double xy_stepSize,
-    const double z_stepSize,
-    const double horizontal_distance,
-    const double down_sample_factor) {
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
+    const double xy_sensor_resolution,
+    const double z_sensor_resolution) {
   // Get the appropriate size for the grid.
-  xy_grid_step_ = xy_stepSize;
-  z_grid_step_ = z_stepSize;
+  xy_grid_step_ = xy_sampling_resolution;
+  z_grid_step_ =
+      z_sampling_resolution > 0 ? z_sampling_resolution :
+        xy_sampling_resolution * (z_sensor_resolution / xy_sensor_resolution);
 
   // Downweight all points beyond kMaxDiscountPoints because they are not
   // all independent.
@@ -280,8 +264,11 @@ void DensityGridTracker::computeDensityGridSize(
   zSize_ = min(kMaxZSize, max(1, static_cast<int>(
       ceil((max_pt.z - min_pt_.z) / z_grid_step_))));
 
+  // Set the minimum probability density for any grid cell.
+  min_density_ = kSmoothingFactor;
+
   // Reset the density grid to the default value.
-  const double default_val = log(kSmoothingFactor);
+  const double default_val = log(min_density_);
   for (int i = 0; i < xSize_; ++i) {
     for (int j = 0; j < ySize_; ++j) {
       std::fill(
@@ -290,45 +277,33 @@ void DensityGridTracker::computeDensityGridSize(
     }
   }
 
-  // TODO - pass this as an input parameter.
-  // Compute the sensor horizontal resolution
-  const double velodyne_horizontal_res_actual = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
-
-  // The effective resolution = resolution / downsample factor.
-  const double velodyne_horizontal_res = velodyne_horizontal_res_actual / down_sample_factor;
-
-  // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
-  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
-
   // Compute the different sources of error in the xy directions.
-  const double sampling_error_xy = kSigmaGridFactor * xy_stepSize;
-  const double resolution_error_xy = velodyne_horizontal_res * kSigmaFactor;
+  const double sampling_error_xy = kSigmaGridFactor * xy_sampling_resolution;
+  const double resolution_error_xy = kSigmaFactor * xy_sensor_resolution;
   const double noise_error_xy = kMinMeasurementVariance;
 
   // The variance is a combination of these 3 sources of error.
-  spillover_sigma_xy_ = sqrt(pow(sampling_error_xy, 2) +
+  sigma_xy_ = sqrt(pow(sampling_error_xy, 2) +
                              pow(resolution_error_xy, 2) +
                              pow(noise_error_xy, 2));
 
   // Compute the different sources of error in the z direction.
-  const double sampling_error_z = 0 ; //kSigmaGridFactor * z_stepSize;
-  const double resolution_error_z = velodyne_vertical_res * kSigmaFactor;
+  const double sampling_error_z = kSigmaGridFactor * z_sampling_resolution;
+  const double resolution_error_z = kSigmaFactor * z_sensor_resolution;
   const double noise_error_z = kMinMeasurementVariance;
 
   // The variance is a combination of these 3 sources of error.
-  spillover_sigma_z_ = sqrt(pow(sampling_error_z, 2) + pow(resolution_error_z, 2) +
+  sigma_z_ = sqrt(pow(sampling_error_z, 2) + pow(resolution_error_z, 2) +
                             pow(noise_error_z, 2));
 
   // In our discrete grid, we want to compute the Gaussian for a certian
   // number of grid cells away from the point.
   num_spillover_steps_xy_ =
-      ceil(kSpilloverRadius * spillover_sigma_xy_ / xy_grid_step_ - 1);
+      ceil(kSpilloverRadius * sigma_xy_ / xy_grid_step_ - 1);
   // Our implementation requires that we spill over at least 1 cell in the
   // z direction.
   num_spillover_steps_z_ =
-      max(1.0, ceil(kSpilloverRadius * spillover_sigma_z_ / z_grid_step_ - 1));
-
-  min_density_ = kSmoothingFactor;
+      max(1.0, ceil(kSpilloverRadius * sigma_z_ / z_grid_step_ - 1));
 }
 
 void DensityGridTracker::computeDensityGrid(
@@ -342,9 +317,9 @@ void DensityGridTracker::computeDensityGrid(
   // exp(-x^2 * grid_size^2 / 2 sigma^2) = exp(x^2 * factor)
   // where x is the number of grid steps.
   const double xy_exp_factor =
-      -1.0 * pow(xy_grid_step_, 2) / (2 * pow(spillover_sigma_xy_, 2));
+      -1.0 * pow(xy_grid_step_, 2) / (2 * pow(sigma_xy_, 2));
   const double z_exp_factor =
-      -1.0 * pow(z_grid_step_, 2) / (2 * pow(spillover_sigma_z_, 2));
+      -1.0 * pow(z_grid_step_, 2) / (2 * pow(sigma_z_, 2));
 
   // For any given point, the density falls off as a Gaussian to
   // neighboring regions.
