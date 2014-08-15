@@ -323,19 +323,10 @@ void DensityGridTracker::computeDensityGridSize(
   // number of grid cells away from the point.
   num_spillover_steps_xy_ =
       ceil(kSpilloverRadius * spillover_sigma_xy_ / xy_grid_step_ - 1);
-
-  // TODO - try using this.
-  const int fake_num_spillover_steps_z =
-      ceil(kSpilloverRadius * spillover_sigma_z_ / z_grid_step_ - 1);
-
-  /*if (fake_num_spillover_steps_z > 1) {
-    printf("horizontal_distance: %lf, velodyne_vertical_res: %lf, z_grid_step_: %lf, "
-           "fake_num_spillover_steps_z: %d\n", horizontal_distance, velodyne_vertical_res,
-           z_grid_step_, fake_num_spillover_steps_z);
-  }*/
-
-  // Because
-  num_spillover_steps_z_ = 1;
+  // Our implementation requires that we spill over at least 1 cell in the
+  // z direction.
+  num_spillover_steps_z_ =
+      max(1.0, ceil(kSpilloverRadius * spillover_sigma_z_ / z_grid_step_ - 1));
 
   min_density_ = kSmoothingFactor;
 }
@@ -379,8 +370,8 @@ void DensityGridTracker::computeDensityGrid(
     }
   }
 
-  if (num_spillover_steps_z_ != 1) {
-    printf("Error - we assume that we are spilling exactly 1 in the"
+  if (num_spillover_steps_z_ == 0) {
+    printf("Error - we assume that we are spilling at least 1 in the"
            "z-direction\n");
   }
 
@@ -408,31 +399,59 @@ void DensityGridTracker::computeDensityGrid(
     const int min_y_index =
         min(ySize_ - 2, max(1, y_index - num_spillover_steps_xy_));
 
-    // For z, we only spill up one and down one, so pre-compute these.
-    const int z_spill = std::min(std::max(1, z_index), zSize_ - 2);
-    const int z_spill_up = std::min(z_spill + 1, zSize_ - 2);
-    const int z_spill_down = std::max(1, z_spill - 1);
+    if (num_spillover_steps_z_ > 1) {
+      const int max_z_index =
+          max(1, min(zSize_ - 2, z_index + num_spillover_steps_z_));
+      const int min_z_index =
+          max(1, min(zSize_ - 2, z_index - num_spillover_steps_z_));
 
-    // Spill the probability into neighboring cells as a Guassian.
-    for (int x_spill = min_x_index; x_spill <= max_x_index; ++x_spill){
-      const int x_diff = abs(x_index - x_spill);
+      // Spill the probability into neighboring cells as a Guassian.
+      for (int x_spill = min_x_index; x_spill <= max_x_index; ++x_spill){
+        const int x_diff = abs(x_index - x_spill);
 
-      for (int y_spill = min_y_index; y_spill <= max_y_index; ++y_spill) {
-        const int y_diff = abs(y_index - y_spill);
+        for (int y_spill = min_y_index; y_spill <= max_y_index; ++y_spill) {
+          const int y_diff = abs(y_index - y_spill);
 
-        const double spillover0 = spillovers[x_diff][y_diff][0];
+          for (int z_spill = min_z_index; z_spill <= max_z_index; ++z_spill) {
+            const int z_diff = abs(z_index - z_spill);
 
-        density_grid_[x_spill][y_spill][z_spill] =
-            max(density_grid_[x_spill][y_spill][z_spill], spillover0);
+          const double spillover = spillovers[x_diff][y_diff][z_diff];
 
-        const double spillover1 = spillovers[x_diff][y_diff][1];
+          density_grid_[x_spill][y_spill][z_spill] =
+              max(density_grid_[x_spill][y_spill][z_spill], spillover);
+          }
+        }
+      }
+    } else {
+      // This is an optimization that we can do if we are only spilling
+      // over 1 grid cell, which happens fairy often.
 
-        density_grid_[x_spill][y_spill][z_spill_up] =
-            max(density_grid_[x_spill][y_spill][z_spill_up], spillover1);
+      // For z, we only spill up one and down one, so pre-compute these.
+      const int z_spill = std::min(std::max(1, z_index), zSize_ - 2);
+      const int z_spill_up = std::min(z_spill + 1, zSize_ - 2);
+      const int z_spill_down = std::max(1, z_spill - 1);
 
-        density_grid_[x_spill][y_spill][z_spill_down] =
-            max(density_grid_[x_spill][y_spill][z_spill_down], spillover1);
+      // Spill the probability into neighboring cells as a Guassian.
+      for (int x_spill = min_x_index; x_spill <= max_x_index; ++x_spill){
+        const int x_diff = abs(x_index - x_spill);
 
+        for (int y_spill = min_y_index; y_spill <= max_y_index; ++y_spill) {
+          const int y_diff = abs(y_index - y_spill);
+
+          const double spillover0 = spillovers[x_diff][y_diff][0];
+
+          density_grid_[x_spill][y_spill][z_spill] =
+              max(density_grid_[x_spill][y_spill][z_spill], spillover0);
+
+          const double spillover1 = spillovers[x_diff][y_diff][1];
+
+          density_grid_[x_spill][y_spill][z_spill_up] =
+              max(density_grid_[x_spill][y_spill][z_spill_up], spillover1);
+
+          density_grid_[x_spill][y_spill][z_spill_down] =
+              max(density_grid_[x_spill][y_spill][z_spill_down], spillover1);
+
+        }
       }
     }
   }

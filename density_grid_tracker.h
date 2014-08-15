@@ -80,6 +80,13 @@ private:
   DensityGridTracker(DensityGridTracker const&);              // Don't Implement.
   void operator=(DensityGridTracker const&); // Don't implement
 
+  /*void FillGridOneZ(
+      const int x_index, const int y_index,
+      const int min_x_index, const int min_y_index,
+      const int max_x_index, const int max_y_index,
+      const int z_index,
+      const std::vector<std::vector<std::vector<double> > >& spillovers);*/
+
   // Determine the size and minimum density for the density grid.
   void computeDensityGridSize(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,

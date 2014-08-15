@@ -58,20 +58,23 @@ void computeErrorStatistics(const std::vector<double>& errors) {
 
   const double rms_error = sqrt(sum_sq / errors.size());
 
-  //printf("RMS error: %lf\n", rms_error);
-  printf("%lf\n", rms_error);
+  printf("RMS error: %lf\n", rms_error);
 }
 
 void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
-                      const string& gt_folder) {
+                      const string& gt_folder,
+                      boost::shared_ptr<std::vector<bool> > filter) {
 
   std::vector<double> errors;
+
+  int total_framenum = -1;
 
   // Iterate over all tracks.
   for (size_t i = 0; i < velocity_estimates.size(); ++i) {
     TrackResults track_results = velocity_estimates[i];
 
     int track_num = track_results.track_num;
+    //printf("Track num: %d\n", track_num);
 
     std::vector<double> gt_velocities;
     getGTVelocities(gt_folder, track_num, &gt_velocities);
@@ -83,12 +86,16 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
 
     int skipped = 0;
 
-    std::vector<double> track_errors;
-
     for (size_t j = 0; j < track_results.estimated_velocities.size(); ++j) {
+      total_framenum++;
+
       if (track_results.ignore_frame[j]) {
         //printf("Skipping frame: %zu\n", j);
         skipped++;
+        continue;
+      }
+
+      if (filter && !((*filter)[total_framenum])) {
         continue;
       }
 
@@ -99,21 +106,41 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
 
       const double estimated_velocity_magnitude = estimated_velocity.norm();
       const double gt_velocity_magnitude = gt_velocities[j-skipped];
+      const double error = estimated_velocity_magnitude - gt_velocity_magnitude;
 
-      //printf("%zu: Vel: %lf, gt: %lf\n", j, estimated_velocity_magnitude,
-      //       gt_velocity_magnitude);
+      /*printf("%zu: Vel: %lf, gt: %lf, error: %lf\n", j, estimated_velocity_magnitude,
+             gt_velocity_magnitude, error);*/
 
-      errors.push_back(estimated_velocity_magnitude - gt_velocity_magnitude);
-
-      track_errors.push_back(estimated_velocity_magnitude - gt_velocity_magnitude);
+      errors.push_back(error);
     }
-    //printf("Errors for track: %d: ", track_num);
-    //computeErrorStatistics(track_errors);
   }
 
-  printf("Overall stats:\n");
-
   computeErrorStatistics(errors);
+}
+
+void getWithinDistance(
+    const track_manager_color::TrackManagerColor& track_manager,
+    const double max_distance, std::vector<bool>& filter) {
+  const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
+      track_manager.tracks_;
+  for (size_t i = 0; i < tracks.size(); ++i) {
+    // Extract frames.
+    const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
+    std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
+        track->frames_;
+    for (size_t j = 1; j < frames.size(); ++j) {
+      boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
+
+      Eigen::Vector3f centroid = frame->getCentroid();
+      const double distance = sqrt(pow(centroid(0), 2) + pow(centroid(1), 2));
+
+      if (distance <= max_distance) {
+        filter.push_back(true);
+      } else {
+        filter.push_back(false);
+      }
+    }
+  }
 }
 
 int main(int argc, char **argv)
@@ -155,6 +182,10 @@ int main(int argc, char **argv)
     const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
     std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
         track->frames_;
+
+    /*if (track->track_num_ != 60) {
+      continue;
+    }*/
 
     // Structure for storing track output.
     TrackResults track_estimates;
@@ -227,7 +258,14 @@ int main(int argc, char **argv)
   const double ms = hrt.getMilliseconds();
   printf("Mean runtime per frame: %lf ms\n", ms / total_num_frames);
 
-  evaluateTracking(velocity_estimates, gt_folder);
+  boost::shared_ptr<std::vector<bool> > empty_filter;
+  evaluateTracking(velocity_estimates, gt_folder, empty_filter);
+
+  const double max_distance = 5;
+  printf("Evaluating for tracks within %lf m\n", max_distance);
+  boost::shared_ptr<std::vector<bool> > filter(new std::vector<bool>);
+  getWithinDistance(track_manager, max_distance, *filter);
+  evaluateTracking(velocity_estimates, gt_folder, filter);
 
   return 0;
 }
