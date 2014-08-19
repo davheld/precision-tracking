@@ -8,7 +8,11 @@
 #include "precision_tracker.h"
 
 #include <boost/math/constants/constants.hpp>
+
 #include "down_sampler.h"
+#include "density_grid_tracker.h"
+#include "lf_discrete_3d.h"
+#include "lf_rgbd_6d.h"
 
 namespace {
 
@@ -100,7 +104,13 @@ Eigen::Matrix4f makeTransformationMatrix(const double& x, const double& y, const
 
 PrecisionTracker::PrecisionTracker()
 {
-  alignment_evaluator_.reset(new DensityGridTracker);
+  if (use_color) {
+    alignment_evaluator_.reset(new LF_RGBD_6D);
+  } /*else if (use_lf_tracker) {
+    alignment_evaluator_.reset(new LFDiscrete3d);
+  } */ else {
+    alignment_evaluator_.reset(new DensityGridTracker);
+  }
 }
 
 PrecisionTracker::~PrecisionTracker() {

@@ -14,7 +14,6 @@
 #include "scored_transform.h"
 #include "motion_model.h"
 #include "adh_tracker3d.h"
-#include "density_grid_tracker.h"
 
 class PrecisionTracker {
 public:

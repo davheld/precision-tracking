@@ -230,7 +230,6 @@ double LF_RGBD_6D::getLogProbability(
   Eigen::Affine3f transform;
   makeEigenTransform(current_points_centroid, delta_x, delta_y, delta_z, roll,
                      pitch, yaw, &transform);
-  //transform = Eigen::Translation<float,3>(delta_x, delta_y, delta_z);
 
   // Transform the cloud.
   pcl::transformPointCloud(*current_points, *transformed_current_points,
@@ -238,8 +237,6 @@ double LF_RGBD_6D::getLogProbability(
 
   // Total log measurement probability.
   double log_measurement_prob = 0;
-
-  //printf("shift: x: %lf, y: %lf, z: %lf\n", delta_x, delta_y, delta_z);
 
   // Iterate over every point, and look up its score in the density grid.
   const size_t num_points = current_points->size();
