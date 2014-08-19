@@ -49,17 +49,6 @@ public:
 
   void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
 
-  void score3DTransforms(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const Eigen::Vector3f& current_points_centroid,
-      const double xy_sampling_resolution,
-      const double z_sampling_resolution,
-      const double sensor_horizontal_resolution,
-      const double sensor_vertical_resolution,
-      const std::vector<XYZTransform>& transforms,
-      const MotionModel& motion_model,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
-
   // Score each ofthe xyz transforms.
   void score6DTransforms(
       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
@@ -73,6 +62,12 @@ public:
       ScoredTransforms<ScoredTransform6D>* scored_transforms);
 
 private:
+  double getLogProbability(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+      const Eigen::Vector3f& current_points_centroid,
+      const MotionModel& motion_model,
+      const double x, const double y, const double z);
+
   // Get the likelihood field score of the transform applied to the
   // current points.
   double getLogProbability(

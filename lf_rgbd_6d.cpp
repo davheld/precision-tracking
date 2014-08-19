@@ -33,7 +33,7 @@ namespace {
 // Approximation factor for finding the nearest neighbor.
 // Set to 0 to find the exact nearest neighbor.
 // For a reasonable speedup, set to 2.
-const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 2;
+const double kSearchTreeEpsilon = 2;
 
 // -----Color Parameters----
 
@@ -44,27 +44,27 @@ const bool kUseColor = true;
 const bool kTwoColors = false;
 
 // The parameter to use for our color Laplacian for color 1.
-const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 13.9;
+const double kValueSigma1 = 13.9;
 
 // The parameter to use for our color Laplacian for color 2.
-const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15.2;
+const double kValueSigma2 = 15.2;
 
 // How much we expect the colors to match (there might have been lens flare,
 // the lighting might have changed, etc. which would cause all the colors
 // to be completely wrong).
-const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.05;
+const double kProbColorMatch = 0.05;
 
 // How much to care about color as a function of the particle sampling resolution.
 // When we are sampling sparsely, we do not expect the colors to align well.
 // Set to 0 to ignore this term.
 // If non-zero, we set prob_color_match_ = kProbColorMatch *
 //    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
-const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 10;
+const double kColorThreshFactor = 10;
 
 // Which color space to use for our color matches.
 // 0: Use blue and green,
 // 1: Use (R + G + B) / 3.
-const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 0;
+const int kColorSpace = 0;
 
 } // namespace
 
@@ -116,48 +116,6 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
   } else {
     prob_color_match_ = kProbColorMatch * exp(-pow(xy_sampling_resolution_, 2) /
         (2 * pow(kColorThreshFactor, 2)));
-  }
-}
-
-void LF_RGBD_6D::score3DTransforms(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-    const Eigen::Vector3f& current_points_centroid,
-    const double xy_sampling_resolution,
-    const double z_sampling_resolution,
-    const double sensor_horizontal_resolution,
-    const double sensor_vertical_resolution,
-    const std::vector<XYZTransform>& transforms,
-    const MotionModel& motion_model,
-    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
-  // Initialize variables for tracking grid.
-  init(xy_sampling_resolution, z_sampling_resolution,
-       sensor_horizontal_resolution, sensor_vertical_resolution);
-
-  const size_t num_transforms = transforms.size();
-
-  // Compute scores for all of the transforms using the density grid.
-  scored_transforms->clear();
-  scored_transforms->resize(num_transforms);
-
-  // For a 3D transform, set the angular rotations to 0.
-  const double roll = 0;
-  const double pitch = 0;
-  const double yaw = 0;
-
-  for(size_t i = 0; i < num_transforms; ++i){
-    const XYZTransform& transform = transforms[i];
-    const double x = transform.x;
-    const double y = transform.y;
-    const double z = transform.z;
-    const double volume = transform.volume;
-
-    const double log_prob = getLogProbability(
-          current_points, current_points_centroid, motion_model,
-          x, y, z, roll, pitch, yaw);
-
-    // Save the complete transform with its log probability.
-    const ScoredTransformXYZ scored_transform(x, y, z, log_prob, volume);
-    scored_transforms->set(scored_transform, i);
   }
 }
 
@@ -238,6 +196,20 @@ void LF_RGBD_6D::makeEigenTransform(
 
   // Copy from a matrix to a transform.
   *transform = transformationMatrix;
+}
+
+double LF_RGBD_6D::getLogProbability(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+    const Eigen::Vector3f& current_points_centroid,
+    const MotionModel& motion_model,
+    const double x, const double y, const double z) {
+  // For a 3D transform, set the angular rotations to 0.
+  const double roll = 0;
+  const double pitch = 0;
+  const double yaw = 0;
+
+  return getLogProbability(current_points, current_points_centroid, motion_model,
+                    x, y, z, roll, pitch, yaw);
 }
 
 double LF_RGBD_6D::getLogProbability(

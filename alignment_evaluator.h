@@ -18,7 +18,8 @@ public:
   AlignmentEvaluator();
   virtual ~AlignmentEvaluator();
 
-  virtual void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
+  virtual void setPrevPoints(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
 
   virtual void score3DTransforms(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
@@ -29,13 +30,21 @@ public:
       const double sensor_vertical_resolution,
       const std::vector<XYZTransform>& transforms,
       const MotionModel& motion_model,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms) = 0;
+      ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 protected:
   virtual void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
             const double sensor_horizontal_resolution,
             const double sensor_vertical_resolution);
+
+  // Get the likelihood field score of the transform (x,y,z) applied to the
+  // current points.
+  virtual double getLogProbability(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+      const Eigen::Vector3f& current_points_centroid,
+      const MotionModel& motion_model,
+      const double x, const double y, const double z) = 0;
 
   // Previous points for alignment.
   pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points_;

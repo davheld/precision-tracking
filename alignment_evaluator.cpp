@@ -79,3 +79,41 @@ void AlignmentEvaluator::init(
   xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy, 2)) + pow(sigma_z, 2));
   isotropic_ = (xy_exp_factor_ == z_exp_factor_);
 }
+
+void AlignmentEvaluator::score3DTransforms(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+    const Eigen::Vector3f& current_points_centroid,
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
+    const double sensor_horizontal_resolution,
+    const double sensor_vertical_resolution,
+    const std::vector<XYZTransform>& transforms,
+    const MotionModel& motion_model,
+    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
+  // Initialize variables for tracking grid.
+  init(xy_sampling_resolution, z_sampling_resolution,
+       sensor_horizontal_resolution, sensor_vertical_resolution);
+
+  const size_t num_transforms = transforms.size();
+
+  // Compute scores for all of the transforms using the density grid.
+  scored_transforms->clear();
+  scored_transforms->resize(num_transforms);
+
+  for(size_t i = 0; i < num_transforms; ++i){
+    const XYZTransform& transform = transforms[i];
+    const double delta_x = transform.x;
+    const double delta_y = transform.y;
+    const double delta_z = transform.z;
+    const double volume = transform.volume;
+
+    const double log_prob = getLogProbability(
+          current_points, current_points_centroid, motion_model,
+          delta_x, delta_y, delta_z);
+
+    // Save the complete transform with its log probability.
+    const ScoredTransformXYZ scored_transform(delta_x, delta_y, delta_z,
+                                              log_prob, volume);
+    scored_transforms->set(scored_transform, i);
+  }
+}
