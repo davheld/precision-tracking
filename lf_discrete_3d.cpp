@@ -66,7 +66,7 @@ const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? at
 // Approximation factor for finding the nearest neighbor.
 // Set to 0 to find the exact nearest neighbor.
 // For a reasonable speedup, set to 2.
-const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 2;
+const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 0;
 
 const double pi = boost::math::constants::pi<double>();
 

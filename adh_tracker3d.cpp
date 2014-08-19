@@ -19,7 +19,7 @@ using std::max;
 namespace {
 
 // Whether to include color probabilities when performing the alignment.
-const bool use_color = true;
+const bool use_color = false;
 
 // Whether to use the density grid tracker (pre-caching) or the lf_tracker
 // (post-caching).  The LF_tracker is slightly more accurate but about
@@ -173,9 +173,9 @@ void ADHTracker3d::track(
       if (use_color) {
         lf_rgbd_6d_.score3DTransforms(
               current_points, current_points_centroid,
-              current_xy_sampling_resolution, current_z_sampling_resolution,
+              new_xy_sampling_resolution, new_z_sampling_resolution,
               xy_sensor_resolution, z_sensor_resolution, 1,
-              xyz_transforms, motion_model,
+              new_xyz_transforms, motion_model,
               &scored_transforms3D);
       } else if (use_lf_tracker) {
           lf_discrete_3d_.scoreXYZTransforms(

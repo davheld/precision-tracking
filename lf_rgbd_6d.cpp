@@ -62,7 +62,7 @@ const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? at
 // Approximation factor for finding the nearest neighbor.
 // Set to 0 to find the exact nearest neighbor.
 // For a reasonable speedup, set to 2.
-const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 2;
+const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 0;
 
 // -----Color Parameters----
 
@@ -136,23 +136,24 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
 
   // Because of downsampling, the effective resoluton of the sensor
   // can be different from the actual resolution.
-  const double sensor_horizontal_resolution_effective =
+  /*const double sensor_horizontal_resolution_effective =
       sensor_horizontal_resolution / down_sample_factor;
   const double sensor_vertical_resolution_effective =
-      sensor_vertical_resolution / down_sample_factor;
+      sensor_vertical_resolution / down_sample_factor;*/
 
   // Compute the expected spatial variance in the x and y directions.
   const double error1_xy =
       kUse_annealing ? kSigmaGridFactor * xy_sampling_resolution_ : 0;
   const double error2_xy =
-      sensor_horizontal_resolution_effective * kSigmaFactor;
+      sensor_horizontal_resolution * kSigmaFactor;
   const double sigma_xy = sqrt(pow(error1_xy, 2) + pow(error2_xy, 2) +
                                pow(kMinMeasurementVariance, 2));
+
 
   const double error1_z =
       kUse_annealing ? kSigmaGridFactor * z_sampling_resolution_ : 0;
   const double error2_z =
-      sensor_vertical_resolution_effective * kSigmaFactor;
+      sensor_vertical_resolution * kSigmaFactor;
   const double sigma_z = sqrt(pow(error1_z, 2) + pow(error2_z, 2) +
                               pow(kMinMeasurementVariance, 2));
 
@@ -165,6 +166,10 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
   xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy, 2)) + pow(sigma_z, 2));
   isotropic_ = (xy_exp_factor_ == z_exp_factor_);
 
+  //printf("Sampling res: %lf, error1_xy: %lf, sensor_horizontal_resolution: %lf, error2_xy: %lf, sigma_xy: %lf, xy_exp_factor_: %lf\n", xy_sampling_resolution_,
+  //       error1_xy, sensor_horizontal_resolution, error2_xy, sigma_xy, xy_exp_factor_);
+
+
   // Compute the total particle sampling resolution
   const double sampling_resolution = sqrt(pow(xy_sampling_resolution_, 2) +
                                           pow(z_sampling_resolution_, 2));
@@ -175,7 +180,7 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
   if (kColorThreshFactor == 0) {
     prob_color_match_ = kProbColorMatch;
   } else {
-    prob_color_match_ = kProbColorMatch * exp(-pow(sampling_resolution, 2) /
+    prob_color_match_ = kProbColorMatch * exp(-pow(xy_sampling_resolution_, 2) /
         (2 * pow(kColorThreshFactor, 2)));
   }
 }
@@ -314,26 +319,47 @@ double LF_RGBD_6D::getLogProbability(
     const double pitch,
     const double yaw) {
   // Make a new cloud to store the transformed cloud for the current points.
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_current_points(
+  /*pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_current_points(
       new pcl::PointCloud<pcl::PointXYZRGB>);
 
   // Make the desired transform.
   Eigen::Affine3f transform;
-  makeEigenTransform(current_points_centroid, delta_x, delta_y, delta_z, roll,
-                     pitch, yaw, &transform);
+  //makeEigenTransform(current_points_centroid, delta_x, delta_y, delta_z, roll,
+  //                   pitch, yaw, &transform);
+  transform = Eigen::Translation<float,3>(delta_x, delta_y, delta_z);
 
   // Transform the cloud.
   pcl::transformPointCloud(*current_points, *transformed_current_points,
-                           transform);
+                           transform);*/
 
   // Total log measurement probability.
   double log_measurement_prob = 0;
+
+  //printf("shift: x: %lf, y: %lf, z: %lf\n", delta_x, delta_y, delta_z);
 
   // Iterate over every point, and look up its score in the density grid.
   const size_t num_points = current_points->size();
   for (size_t i = 0; i < num_points; ++i) {
     // Extract the point so we can compute its score.
-    const pcl::PointXYZRGB& current_pt = (*transformed_current_points)[i];
+    const pcl::PointXYZRGB& current_pt_unshifted = (*current_points)[i];
+    pcl::PointXYZRGB current_pt;
+
+    current_pt.x = current_pt_unshifted.x + delta_x;
+    current_pt.y = current_pt_unshifted.y + delta_y;
+    current_pt.z = current_pt_unshifted.z + delta_z;
+    current_pt.rgb = current_pt_unshifted.rgb;
+
+
+    //const pcl::PointXYZRGB& current_pt = (*transformed_current_points)[i];
+
+    /*printf("points: x: %lf, %lf, y: %lf, %lf, z: %lf, %lf\n",
+           current_pt.x, current_pt_unshifted.x,
+           current_pt.y, current_pt_unshifted.y,
+           current_pt.z, current_pt_unshifted.z);
+    printf("colors: x: %d, %d, y: %d, %d, z: %d, %d\n",
+           current_pt.r, current_pt_unshifted.r,
+           current_pt.g, current_pt_unshifted.g,
+           current_pt.b, current_pt_unshifted.b);*/
 
     // Compute the probability.
     log_measurement_prob += get_log_prob(current_pt);
@@ -358,9 +384,9 @@ double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
 
     // Compute the log probability of this neighbor match.
   double log_point_match_prob_i;
-  if (isotropic_) {
+  //if (isotropic_) {
     log_point_match_prob_i = nn_sq_dists_[0] * xy_exp_factor_;
-  } else {
+  /*} else {
     // Compute the distance to the neighbor in each direction.
     const double distance_xy_sq =
         pow(prev_pt.x - current_pt.x, 2) + pow(prev_pt.y - current_pt.y, 2);
@@ -368,7 +394,7 @@ double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
 
     log_point_match_prob_i = distance_xy_sq * xy_exp_factor_ +
         distance_z_sq * z_exp_factor_;
-  }
+  }*/
 
   // Compute the probability of this neighbor match.
   const double point_match_prob_spatial_i = exp(log_point_match_prob_i);
@@ -391,6 +417,7 @@ double LF_RGBD_6D::computeColorProb(const pcl::PointXYZRGB& prev_pt,
     const pcl::PointXYZRGB& pt, const double point_match_prob_spatial_i) const {
   // Because we are using color, we have to modify the smoothing factor.
   const double factor1 = smoothing_factor_ / (smoothing_factor_ + 1);
+
   double smoothing_factor;
   if (kUseColor && !kTwoColors) {
     smoothing_factor = factor1 / 255;
@@ -402,7 +429,7 @@ double LF_RGBD_6D::computeColorProb(const pcl::PointXYZRGB& prev_pt,
   smoothing_factor *= (1 - point_match_prob_spatial_i);
 
   // Find the colors of the 2 points.
-  double color1 = 0, color2 = 0, color3 = 0, color4 = 0;
+  int color1 = 0, color2 = 0, color3 = 0, color4 = 0;
   if (kColorSpace == 0) {
     // Blue and Green.
     color1 = pt.b;
