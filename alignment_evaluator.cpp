@@ -13,13 +13,13 @@ namespace {
 // With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
 const double kSigmaFactor = 0.5;
 
-// Factor to multiply the particle sampling resolution for our measurement  model.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// Factor to multiply the particle sampling resolution for our measurement
+// model. We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
 // With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
 const double kSigmaGridFactor = 1;
 
-// The noise in our sensor which is independent of the distance to the tracked object.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
+// The noise in our sensor which is independent of the distance to the tracked
+// object. We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
 // With sigma^2 = kMinMeasurementVariance^2 + other terms.
 const double kMinMeasurementVariance = 0.03;
 
@@ -53,30 +53,36 @@ void AlignmentEvaluator::setPrevPoints(
 void AlignmentEvaluator::init(
     const double xy_sampling_resolution,
     const double z_sampling_resolution,
-    const double sensor_horizontal_resolution,
-    const double sensor_vertical_resolution) {
+    const double xy_sensor_resolution,
+    const double z_sensor_resolution) {
   xy_sampling_resolution_ = xy_sampling_resolution;
   z_sampling_resolution_ = z_sampling_resolution;
 
-  // Compute the expected spatial variance in the x and y directions.
-  const double error1_xy = kSigmaGridFactor * xy_sampling_resolution;
-  const double error2_xy = sensor_horizontal_resolution * kSigmaFactor;
-  const double sigma_xy = sqrt(pow(error1_xy, 2) + pow(error2_xy, 2) +
-                               pow(kMinMeasurementVariance, 2));
+  // Compute the different sources of error in the xy directions.
+  const double sampling_error_xy = kSigmaGridFactor * xy_sampling_resolution;
+  const double resolution_error_xy = kSigmaFactor * xy_sensor_resolution;
+  const double noise_error_xy = kMinMeasurementVariance;
 
+  // The variance is a combination of these 3 sources of error.
+  sigma_xy_ = sqrt(pow(sampling_error_xy, 2) +
+                             pow(resolution_error_xy, 2) +
+                             pow(noise_error_xy, 2));
 
-  const double error1_z = kSigmaGridFactor * z_sampling_resolution_;
-  const double error2_z = sensor_vertical_resolution * kSigmaFactor;
-  const double sigma_z = sqrt(pow(error1_z, 2) + pow(error2_z, 2) +
-                              pow(kMinMeasurementVariance, 2));
+  // Compute the different sources of error in the z direction.
+  const double sampling_error_z = kSigmaGridFactor * z_sampling_resolution;
+  const double resolution_error_z = kSigmaFactor * z_sensor_resolution;
+  const double noise_error_z = kMinMeasurementVariance;
 
+  // The variance is a combination of these 3 sources of error.
+  sigma_z_ = sqrt(pow(sampling_error_z, 2) + pow(resolution_error_z, 2) +
+                            pow(noise_error_z, 2));
 
   // Convert the variance to a factor such that
   // exp(-x^2 / 2 sigma^2) = exp(x^2 * factor)
   // where x is the distance.
-  xy_exp_factor_ = -1.0 / (2 * pow(sigma_xy, 2));
-  z_exp_factor_ = -1.0 / (2 * pow(sigma_z, 2));
-  xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy, 2)) + pow(sigma_z, 2));
+  xy_exp_factor_ = -1.0 / (2 * pow(sigma_xy_, 2));
+  z_exp_factor_ = -1.0 / (2 * pow(sigma_z_, 2));
+  xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy_, 2)) + pow(sigma_z_, 2));
   isotropic_ = (xy_exp_factor_ == z_exp_factor_);
 }
 

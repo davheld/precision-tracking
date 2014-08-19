@@ -44,7 +44,7 @@ public:
       const double xy_sensor_resolution,
       const double z_sensor_resolution,
       boost::shared_ptr<AlignmentEvaluator> alignment_evaluator,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
+      ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const;
 
 private:
   // Compute the joint probability of each cell and the region, given

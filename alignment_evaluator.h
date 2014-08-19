@@ -37,8 +37,8 @@ public:
 protected:
   virtual void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
-            const double sensor_horizontal_resolution,
-            const double sensor_vertical_resolution);
+            const double xy_sensor_resolution,
+            const double z_sensor_resolution);
 
   // Get the likelihood field score of the transform (x,y,z) applied to the
   // current points.
@@ -56,12 +56,16 @@ protected:
   double z_sampling_resolution_;
 
   // Covariance parameters for the measurement model.
+  double sigma_xy_;
+  double sigma_z_;
+
   double xy_exp_factor_;
   double z_exp_factor_;
   double xyz_exp_factor_;
   bool isotropic_;
 
-  // Smoothing factor for the measurement model.
+  // Smoothing factor for the measurement model, so we never assign a point
+  // a 0 probability.
   double smoothing_factor_;
 
   double measurement_discount_factor_;

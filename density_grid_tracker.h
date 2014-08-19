@@ -76,19 +76,12 @@ private:
   // between points.
   double discount_factor_;
 
-  // The minimum probability density in the density grid.
-  double min_density_;
-
   // The step size of the density grid.
   double xy_grid_step_;
   double z_grid_step_;
 
   // The minimum point of the previous set of points used for tracking.
   pcl::PointXYZRGB min_pt_;
-
-  // The variance of the points for alignment.
-  double sigma_xy_;
-  double sigma_z_;
 
   // In our discrete grid, we want to compute the Gaussian probability
   // for this many grid cells away from each point.  As we get farther

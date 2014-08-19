@@ -61,7 +61,7 @@ void ADHTracker3d::track(
     const double xy_sensor_resolution,
     const double z_sensor_resolution,
     boost::shared_ptr<AlignmentEvaluator> alignment_evaluator,
-    ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) {
+    ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) const {
   // Compute the minimum sampling resolution based on the sensor
   // resolution - we are limited in accuracy by the sensor resolution,
   // so there is no point in sampling at a much finer scale.

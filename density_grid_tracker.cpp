@@ -23,31 +23,6 @@ const double kMaxDiscountPoints = 150.0;
 // How far to spill over in the density grid (number of sigmas).
 const double kSpilloverRadius = 2.0;
 
-// Factor to multiply the sensor resolution for our measurement model.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
-const double kSigmaFactor = 0.5;
-
-// Factor to multiply the particle sampling resolution for our measurement  model.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
-const double kSigmaGridFactor = 1;
-
-// The noise in our sensor which is independent of the distance to the tracked object.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = kMinMeasurementVariance^2 + other terms.
-const double kMinMeasurementVariance = 0.03;
-
-// We add this to our Gaussian so we don't give 0 probability to points
-// that don't align.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
-const double kSmoothingFactor = 0.8;
-
-// We multiply our log measurement probability by this factor, to decrease
-// our confidence in the measurement model (e.g. to take into account
-// dependencies between neighboring points).
-const double kMeasurementDiscountFactor = 1;
-
 // Total size = 3.7 GB
 // At a resolution of 1.2 cm, a 10 m wide object will take 1000 cells.
 const int kMaxXSize = 1000;
@@ -66,7 +41,7 @@ using std::min;
 // not give a probability of 0 to any location.
 DensityGridTracker::DensityGridTracker()
   : density_grid_(kMaxXSize, vector<vector<double> >(
-        kMaxYSize, vector<double>(kMaxZSize, log(kSmoothingFactor)))) {
+        kMaxYSize, vector<double>(kMaxZSize, log(smoothing_factor_)))) {
 }
 
 DensityGridTracker::~DensityGridTracker() {
@@ -96,6 +71,9 @@ void DensityGridTracker::computeDensityGridParameters(
     const double z_sensor_resolution) {
   // Get the appropriate size for the grid.
   xy_grid_step_ = xy_sampling_resolution;
+
+  // If we are not sampling in the z-direction, then create grid cells
+  // with the ratio based on the sensor resolution.
   z_grid_step_ =
       z_sampling_resolution > 0 ? z_sampling_resolution :
         xy_sampling_resolution * (z_sensor_resolution / xy_sensor_resolution);
@@ -103,9 +81,9 @@ void DensityGridTracker::computeDensityGridParameters(
   // Downweight all points beyond kMaxDiscountPoints because they are not
   // all independent.
   if (prev_points->size() < kMaxDiscountPoints) {
-      discount_factor_ = kMeasurementDiscountFactor;
+      discount_factor_ = measurement_discount_factor_;
   } else {
-      discount_factor_ = kMeasurementDiscountFactor *
+      discount_factor_ = measurement_discount_factor_ *
           (kMaxDiscountPoints / prev_points->size());
   }
 
@@ -142,11 +120,8 @@ void DensityGridTracker::computeDensityGridParameters(
   zSize_ = min(kMaxZSize, max(1, static_cast<int>(
       ceil((max_pt.z - min_pt_.z) / z_grid_step_))));
 
-  // Set the minimum probability density for any grid cell.
-  min_density_ = kSmoothingFactor;
-
   // Reset the density grid to the default value.
-  const double default_val = log(min_density_);
+  const double default_val = log(smoothing_factor_);
   for (int i = 0; i < xSize_; ++i) {
     for (int j = 0; j < ySize_; ++j) {
       std::fill(
@@ -154,25 +129,6 @@ void DensityGridTracker::computeDensityGridParameters(
           density_grid_[i][j].begin() + zSize_, default_val);
     }
   }
-
-  // Compute the different sources of error in the xy directions.
-  const double sampling_error_xy = kSigmaGridFactor * xy_sampling_resolution;
-  const double resolution_error_xy = kSigmaFactor * xy_sensor_resolution;
-  const double noise_error_xy = kMinMeasurementVariance;
-
-  // The variance is a combination of these 3 sources of error.
-  sigma_xy_ = sqrt(pow(sampling_error_xy, 2) +
-                             pow(resolution_error_xy, 2) +
-                             pow(noise_error_xy, 2));
-
-  // Compute the different sources of error in the z direction.
-  const double sampling_error_z = kSigmaGridFactor * z_sampling_resolution;
-  const double resolution_error_z = kSigmaFactor * z_sensor_resolution;
-  const double noise_error_z = kMinMeasurementVariance;
-
-  // The variance is a combination of these 3 sources of error.
-  sigma_z_ = sqrt(pow(sampling_error_z, 2) + pow(resolution_error_z, 2) +
-                            pow(noise_error_z, 2));
 
   // In our discrete grid, we want to compute the Gaussian for a certian
   // number of grid cells away from the point.
@@ -218,7 +174,7 @@ void DensityGridTracker::computeDensityGrid(
         const double log_z_density = k_dist_sq * z_exp_factor;
 
         spillovers[i][j][k] = log(
-              exp(log_xy_density + log_z_density) + min_density_);
+              exp(log_xy_density + log_z_density) + smoothing_factor_);
       }
     }
   }
