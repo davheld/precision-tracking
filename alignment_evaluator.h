@@ -11,7 +11,6 @@
 
 #include "motion_model.h"
 #include "scored_transform.h"
-#include "density_grid_tracker.h"
 
 class AlignmentEvaluator
 {
@@ -28,7 +27,6 @@ public:
       const double z_sampling_resolution,
       const double sensor_horizontal_resolution,
       const double sensor_vertical_resolution,
-      const double down_sample_factor,
       const std::vector<XYZTransform>& transforms,
       const MotionModel& motion_model,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms) = 0;
@@ -37,8 +35,7 @@ protected:
   virtual void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
             const double sensor_horizontal_resolution,
-            const double sensor_vertical_resolution,
-            const double down_sample_factor);
+            const double sensor_vertical_resolution);
 
   // Previous points for alignment.
   pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points_;

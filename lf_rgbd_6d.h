@@ -56,7 +56,6 @@ public:
       const double z_sampling_resolution,
       const double sensor_horizontal_resolution,
       const double sensor_vertical_resolution,
-      const double down_sample_factor,
       const std::vector<XYZTransform>& transforms,
       const MotionModel& motion_model,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
@@ -69,7 +68,6 @@ public:
       const double z_sampling_resolution,
       const double sensor_horizontal_resolution,
       const double sensor_vertical_resolution,
-      const double down_sample_factor,
       const std::vector<Transform6D>& transforms,
       const MotionModel& motion_model,
       ScoredTransforms<ScoredTransform6D>* scored_transforms);
@@ -91,8 +89,7 @@ private:
   void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
             const double sensor_horizontal_resolution,
-            const double sensor_vertical_resolution,
-            const double down_sample_factor);
+            const double sensor_vertical_resolution);
 
   double get_log_prob(const pcl::PointXYZRGB& current_pt);
 

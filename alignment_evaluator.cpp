@@ -50,11 +50,11 @@ void AlignmentEvaluator::setPrevPoints(
   prev_points_ = prev_points;
 }
 
-void AlignmentEvaluator::init(const double xy_sampling_resolution,
-          const double z_sampling_resolution,
-          const double sensor_horizontal_resolution,
-          const double sensor_vertical_resolution,
-          const double down_sample_factor) {
+void AlignmentEvaluator::init(
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
+    const double sensor_horizontal_resolution,
+    const double sensor_vertical_resolution) {
   xy_sampling_resolution_ = xy_sampling_resolution;
   z_sampling_resolution_ = z_sampling_resolution;
 

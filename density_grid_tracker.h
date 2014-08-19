@@ -18,22 +18,17 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include "scored_transform.h"
+#include "alignment_evaluator.h"
 
 
 struct ScoredTransform;
 struct XYZTransform;
 class MotionModel;
 
-// Singleton Class.
 class DensityGridTracker {
 public:
+  DensityGridTracker();
   virtual ~DensityGridTracker();
-
-  static DensityGridTracker& getInstance()
-  {
-      static DensityGridTracker instance;
-      return instance;
-  }
 
   // Compute the probability of each of the transforms being the
   // correct alignment of the current points to the previous points.
@@ -49,10 +44,6 @@ public:
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 private:
-  DensityGridTracker();
-  DensityGridTracker(DensityGridTracker const&); // Don't Implement.
-  void operator=(DensityGridTracker const&); // Don't implement
-
   void computeDensityGridParameters(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
       const double xy_sampling_resolution,
@@ -108,24 +99,6 @@ private:
   // of grid cells for each point.
   int num_spillover_steps_xy_;
   int num_spillover_steps_z_;
-};
-
-
-// A pure translation.
-struct XYZTransform {
-public:
-  double x, y, z;
-  double volume;
-  XYZTransform(
-      const double& x,
-      const double& y,
-      const double& z,
-      const double& volume)
-    :x(x),
-     y(y),
-     z(z),
-     volume(volume)
-  {  }
 };
 
 #endif /* DENSITY_GRID_TRACKER_H_ */

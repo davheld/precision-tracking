@@ -49,9 +49,9 @@ const double kMinProb = 0.0001;
 } // namespace
 
 ADHTracker3d::ADHTracker3d()
-  :lf_discrete_3d_(LFDiscrete3d::getInstance()),
-   density_grid_tracker_(DensityGridTracker::getInstance()),
-   fast_functions_(FastFunctions::getInstance()){
+  ://lf_discrete_3d_(LFDiscrete3d::getInstance()),
+   //density_grid_tracker_(),
+   fast_functions_(FastFunctions::getInstance()) {
   // TODO Auto-generated constructor stub
 }
 
@@ -90,10 +90,9 @@ void ADHTracker3d::track(
     const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
     const Eigen::Vector3f &current_points_centroid,
     const MotionModel& motion_model,
-    const double horizontal_distance,
-    const double down_sample_factor_prev,
     const double xy_sensor_resolution,
     const double z_sensor_resolution,
+    boost::shared_ptr<AlignmentEvaluator> alignment_evaluator,
     ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) {
   // Compute the minimum sampling resolution based on the sensor
   // resolution - we are limited in accuracy by the sensor resolution,
@@ -116,13 +115,22 @@ void ADHTracker3d::track(
 
   // Initially track at a coarse resolution and get the probability of
   // various transforms.
-  if (use_color) {
+  alignment_evaluator->setPrevPoints(prev_points);
+
+  // TODO - combine this with the below function call!
+  alignment_evaluator->score3DTransforms(
+        current_points, current_points_centroid,
+        current_xy_sampling_resolution, current_z_sampling_resolution,
+        xy_sensor_resolution, z_sensor_resolution,
+        xyz_transforms, motion_model, &scored_transforms3D);
+
+  /*if (use_color) {
     lf_rgbd_6d_.setPrevPoints(prev_points);
 
     lf_rgbd_6d_.score3DTransforms(
           current_points, current_points_centroid,
           current_xy_sampling_resolution, current_z_sampling_resolution,
-          xy_sensor_resolution, z_sensor_resolution, 1,
+          xy_sensor_resolution, z_sensor_resolution,
           xyz_transforms, motion_model,
           &scored_transforms3D);
   } else if (use_lf_tracker) {
@@ -141,7 +149,7 @@ void ADHTracker3d::track(
         current_xy_sampling_resolution, current_z_sampling_resolution,
         xyz_transforms, motion_model,
         xy_sensor_resolution, z_sensor_resolution, &scored_transforms3D);
-  }
+  }*/
 
   // Normalize the probabilities so they sum to 1.
   recomputeProbs(1, &scored_transforms3D);
@@ -170,11 +178,17 @@ void ADHTracker3d::track(
     if (new_xyz_transforms.size() > 0) {
       scored_transforms3D.clear();
       // Recompute some of the transforms at a higher resolution.
-      if (use_color) {
+      alignment_evaluator->score3DTransforms(
+            current_points, current_points_centroid,
+            new_xy_sampling_resolution, new_z_sampling_resolution,
+            xy_sensor_resolution, z_sensor_resolution,
+            new_xyz_transforms, motion_model, &scored_transforms3D);
+
+      /*if (use_color) {
         lf_rgbd_6d_.score3DTransforms(
               current_points, current_points_centroid,
               new_xy_sampling_resolution, new_z_sampling_resolution,
-              xy_sensor_resolution, z_sensor_resolution, 1,
+              xy_sensor_resolution, z_sensor_resolution,
               new_xyz_transforms, motion_model,
               &scored_transforms3D);
       } else if (use_lf_tracker) {
@@ -189,7 +203,7 @@ void ADHTracker3d::track(
               new_xy_sampling_resolution, new_z_sampling_resolution,
               new_xyz_transforms, motion_model,
               xy_sensor_resolution, z_sensor_resolution, &scored_transforms3D);
-      }
+      }*/
 
       // Recompute the probability of each of these transforms using the prior
       // probability.

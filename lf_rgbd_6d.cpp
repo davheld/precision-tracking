@@ -99,11 +99,10 @@ void LF_RGBD_6D::setPrevPoints(
 void LF_RGBD_6D::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
-          const double sensor_vertical_resolution,
-          const double down_sample_factor) {
+          const double sensor_vertical_resolution) {
   AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
                            sensor_horizontal_resolution,
-                           sensor_vertical_resolution, down_sample_factor);
+                           sensor_vertical_resolution);
 
   // Compute the total particle sampling resolution
   const double sampling_resolution = sqrt(pow(xy_sampling_resolution_, 2) +
@@ -127,13 +126,12 @@ void LF_RGBD_6D::score3DTransforms(
     const double z_sampling_resolution,
     const double sensor_horizontal_resolution,
     const double sensor_vertical_resolution,
-    const double down_sample_factor,
     const std::vector<XYZTransform>& transforms,
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
   // Initialize variables for tracking grid.
-  init(xy_sampling_resolution, z_sampling_resolution, sensor_horizontal_resolution,
-       sensor_vertical_resolution, down_sample_factor);
+  init(xy_sampling_resolution, z_sampling_resolution,
+       sensor_horizontal_resolution, sensor_vertical_resolution);
 
   const size_t num_transforms = transforms.size();
 
@@ -170,13 +168,12 @@ void LF_RGBD_6D::score6DTransforms(
     const double z_sampling_resolution,
     const double sensor_horizontal_resolution,
     const double sensor_vertical_resolution,
-    const double down_sample_factor,
     const std::vector<Transform6D>& transforms,
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransform6D>* scored_transforms) {
   // Initialize variables for tracking grid.
-  init(xy_sampling_resolution, z_sampling_resolution, sensor_horizontal_resolution,
-       sensor_vertical_resolution, down_sample_factor);
+  init(xy_sampling_resolution, z_sampling_resolution,
+       sensor_horizontal_resolution, sensor_vertical_resolution);
 
   const size_t num_transforms = transforms.size();
 

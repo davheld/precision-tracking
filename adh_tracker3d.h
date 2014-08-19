@@ -43,10 +43,9 @@ public:
 	    const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
 	    const Eigen::Vector3f &current_points_centroid,
 	    const MotionModel& motion_model,
-	    const double horizontal_distance,
-	    const double down_sample_factor_prev,
       const double xy_sensor_resolution,
       const double z_sensor_resolution,
+      boost::shared_ptr<AlignmentEvaluator> alignment_evaluator,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 private:
@@ -69,9 +68,9 @@ private:
       std::vector<XYZTransform>* new_xyz_transforms,
       double* total_recomputing_prob) const;
 
-  LFDiscrete3d& lf_discrete_3d_;
-  LF_RGBD_6D lf_rgbd_6d_;
-  DensityGridTracker& density_grid_tracker_;
+  //LFDiscrete3d& lf_discrete_3d_;
+  //LF_RGBD_6D lf_rgbd_6d_;
+  //DensityGridTracker density_grid_tracker_;
   const FastFunctions& fast_functions_;
 };
 

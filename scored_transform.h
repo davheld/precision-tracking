@@ -20,6 +20,23 @@ FastFunctions& fast_functions1_ = FastFunctions::getInstance();
 
 } //namespace
 
+// A pure translation.
+struct XYZTransform {
+public:
+  double x, y, z;
+  double volume;
+  XYZTransform(
+      const double& x,
+      const double& y,
+      const double& z,
+      const double& volume)
+    :x(x),
+     y(y),
+     z(z),
+     volume(volume)
+  {  }
+};
+
 class ScoredTransform {
 public:
   ScoredTransform() {

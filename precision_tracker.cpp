@@ -131,13 +131,15 @@ void PrecisionTracker::track(
   // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
   const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
 
+  boost::shared_ptr<AlignmentEvaluator> alignment_evaluator(new LF_RGBD_6D);
+
   adh_tracker3d_.track(
         initial_xy_sampling_resolution, initial_z_sampling_resolution,
         xRange, yRange, zRange,
         downSampledPoints1, prev_points, current_points_centroid,
-        motion_model, horizontal_distance,
-        down_sample_factor_prev,
+        motion_model,
         velodyne_horizontal_res, velodyne_vertical_res,
+        alignment_evaluator,
         scored_transforms);
 }
 
