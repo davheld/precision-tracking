@@ -1373,6 +1373,11 @@ void  deserializePointCloud(std::istream& istrm,
   readCloud(istrm, msg);
 
   pcl::fromPCLPointCloud2(msg, point_cloud);
+
+  for (size_t i = 0; i < point_cloud.size(); ++i) {
+    pcl::PointXYZRGB& pt = point_cloud[i];
+    //printf("color: %d, %d, %d\n", pt.r, pt.g, pt.b);
+  }
 }
 
 

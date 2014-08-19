@@ -1,11 +1,11 @@
 /*
- * ap_tracker_3d.cpp
+ * adh_tracker_3d.cpp
  *
  *  Created on: Sep 1, 2013
  *      Author: davheld
  */
 
-#include "ap_tracker3d.h"
+#include "adh_tracker3d.h"
 
 #include <vector>
 #include <algorithm>
@@ -18,9 +18,13 @@ using std::max;
 
 namespace {
 
+// Whether to include color probabilities when performing the alignment.
+const bool use_color = true;
+
 // Whether to use the density grid tracker (pre-caching) or the lf_tracker
-// (post-caching).
-const bool use_lf_tracker = false;
+// (post-caching).  The LF_tracker is slightly more accurate but about
+// twice as slow.
+const bool use_lf_tracker = true;
 
 // We compute the minimum sampling resolution based on the sensor
 // resolution - we are limited in accuracy by the sensor resolution,
@@ -44,18 +48,18 @@ const double kMinProb = 0.0001;
 
 } // namespace
 
-APTracker3d::APTracker3d()
+ADHTracker3d::ADHTracker3d()
   :lf_discrete_3d_(LFDiscrete3d::getInstance()),
    density_grid_tracker_(DensityGridTracker::getInstance()),
    fast_functions_(FastFunctions::getInstance()){
   // TODO Auto-generated constructor stub
 }
 
-APTracker3d::~APTracker3d() {
+ADHTracker3d::~ADHTracker3d() {
   // TODO Auto-generated destructor stub
 }
 
-void APTracker3d::recomputeProbs(
+void ADHTracker3d::recomputeProbs(
     const double prior_prob,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const {
   // Get the conditional probabilities for the region that we subdivided,
@@ -76,7 +80,7 @@ void APTracker3d::recomputeProbs(
   }
 }
 
-void APTracker3d::track(
+void ADHTracker3d::track(
     const double initial_xy_sampling_resolution,
     const double initial_z_sampling_resolution,
     const std::pair <double, double>& xRange,
@@ -104,21 +108,39 @@ void APTracker3d::track(
   // Our most recently scored transforms.
   ScoredTransforms<ScoredTransformXYZ> scored_transforms3D;
 
-  // Initially track at a coarse resolution and get a score for various transforms.
-  if (use_lf_tracker) {
+  // Create initial candidate transforms.
+  vector<XYZTransform> xyz_transforms;
+  createCandidateXYZTransforms(
+        current_xy_sampling_resolution, current_z_sampling_resolution,
+        xRange, yRange, zRange, &xyz_transforms);
+
+  // Initially track at a coarse resolution and get the probability of
+  // various transforms.
+  if (use_color) {
+    lf_rgbd_6d_.setPrevPoints(prev_points);
+
+    lf_rgbd_6d_.score3DTransforms(
+          current_points, current_points_centroid,
+          current_xy_sampling_resolution, current_z_sampling_resolution,
+          xy_sensor_resolution, z_sensor_resolution, 1,
+          xyz_transforms, motion_model,
+          &scored_transforms3D);
+  } else if (use_lf_tracker) {
     lf_discrete_3d_.setPrevPoints(prev_points);
 
-    lf_discrete_3d_.track(current_xy_sampling_resolution, current_z_sampling_resolution, xRange, yRange, zRange,
-        current_points, current_points_centroid,
-        motion_model, horizontal_distance, down_sample_factor_prev,
-        &scored_transforms3D);
+    lf_discrete_3d_.scoreXYZTransforms(
+            current_points,
+            current_xy_sampling_resolution, current_z_sampling_resolution,
+            xyz_transforms, motion_model,
+            horizontal_distance, down_sample_factor_prev,
+            &scored_transforms3D);
+
   } else {
-    density_grid_tracker_.track(
-          current_xy_sampling_resolution, current_z_sampling_resolution,
-          xRange, yRange, zRange,
-          current_points, prev_points, current_points_centroid,
-          motion_model, xy_sensor_resolution, z_sensor_resolution,
-          &scored_transforms3D);
+    density_grid_tracker_.scoreXYZTransforms(
+        current_points, prev_points,
+        current_xy_sampling_resolution, current_z_sampling_resolution,
+        xyz_transforms, motion_model,
+        xy_sensor_resolution, z_sensor_resolution, &scored_transforms3D);
   }
 
   // Normalize the probabilities so they sum to 1.
@@ -148,7 +170,14 @@ void APTracker3d::track(
     if (new_xyz_transforms.size() > 0) {
       scored_transforms3D.clear();
       // Recompute some of the transforms at a higher resolution.
-      if (use_lf_tracker) {
+      if (use_color) {
+        lf_rgbd_6d_.score3DTransforms(
+              current_points, current_points_centroid,
+              current_xy_sampling_resolution, current_z_sampling_resolution,
+              xy_sensor_resolution, z_sensor_resolution, 1,
+              xyz_transforms, motion_model,
+              &scored_transforms3D);
+      } else if (use_lf_tracker) {
           lf_discrete_3d_.scoreXYZTransforms(
                   current_points,
                   new_xy_sampling_resolution, new_z_sampling_resolution, new_xyz_transforms, motion_model,
@@ -157,9 +186,9 @@ void APTracker3d::track(
       } else {
         density_grid_tracker_.scoreXYZTransforms(
             current_points, prev_points,
-            new_xy_sampling_resolution, new_z_sampling_resolution, new_xyz_transforms, motion_model,
-            xy_sensor_resolution, z_sensor_resolution,
-            &scored_transforms3D);
+              new_xy_sampling_resolution, new_z_sampling_resolution,
+              new_xyz_transforms, motion_model,
+              xy_sensor_resolution, z_sensor_resolution, &scored_transforms3D);
       }
 
       // Recompute the probability of each of these transforms using the prior
@@ -184,7 +213,7 @@ bool compareTransforms1(const ScoredTransformXYZ& transform_i,
 }
 
 // Decreases the resolution of all grid cells above a certain threshold probability.
-void APTracker3d::makeNewTransforms3D(
+void ADHTracker3d::makeNewTransforms3D(
     const double xy_offset, const double z_offset,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
     std::vector<XYZTransform>* new_xyz_transforms,
@@ -277,6 +306,79 @@ void APTracker3d::makeNewTransforms3D(
   for (int i = static_cast<int>(to_remove.size() - 1); i >= 0; --i) {
     size_t remove_index = to_remove[i];
     scored_transforms_xyz.erase(scored_transforms_xyz.begin() + remove_index);
+  }
+}
+
+void ADHTracker3d::createCandidateXYZTransforms(
+    const double xy_sampling_resolution,
+    const double z_sampling_resolution,
+    const std::pair <double, double>& xRange,
+    const std::pair <double, double>& yRange,
+    const std::pair <double, double>& zRange_orig,
+    std::vector<XYZTransform>* transforms) const {
+  if (xy_sampling_resolution == 0) {
+    printf("Error - xy sampling resolution must be > 0");
+    exit(1);
+  }
+
+  if (z_sampling_resolution == 0) {
+    if (zRange_orig.first != zRange_orig.second) {
+      printf("Error - z_sampling_resolution = 0 but the z range"
+             "is %lf to %lf\n", zRange_orig.first, zRange_orig.second);
+    }
+
+    // Since our z sampling resolution is 0, set the z value for all samples.
+    const double z = zRange_orig.first;
+
+    // Compute the number of transforms along each direction.
+    const int num_x_locations = (xRange.second - xRange.first) / xy_sampling_resolution + 1;
+    const int num_y_locations = (yRange.second - yRange.first) / xy_sampling_resolution + 1;
+
+    // Reserve space for all of the transforms.
+    transforms->reserve(num_x_locations * num_y_locations);
+
+    // In this case, the volume is actually an area since we are only
+    // sampling in the x and y dimensions.
+    const double volume = pow(xy_sampling_resolution, 2);
+
+    // Create candidate transforms.  We only sample in the horizontal direction.
+    for (double x = xRange.first; x <= xRange.second; x += xy_sampling_resolution) {
+      for (double y = yRange.first; y <= yRange.second; y += xy_sampling_resolution) {
+        XYZTransform transform(x, y, z, volume);
+        transforms->push_back(transform);
+      }
+    }
+  } else {
+    // Make sure we hit 0 in our z range, in case the sampling resolution
+    // is too large.
+    std::pair<double, double> zRange;
+    if (z_sampling_resolution > fabs(zRange_orig.second - zRange_orig.first)) {
+      zRange.first = 0;
+      zRange.second = 0;
+    } else {
+      zRange.first = zRange_orig.first;
+      zRange.second = zRange_orig.second;
+    }
+
+    // Compute the number of transforms along each direction.
+    const int num_x_locations = (xRange.second - xRange.first) / xy_sampling_resolution + 1;
+    const int num_y_locations = (yRange.second - yRange.first) / xy_sampling_resolution + 1;
+    const int num_z_locations = (zRange.second - zRange.first) / z_sampling_resolution + 1;
+
+    // Reserve space for all of the transforms.
+    transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
+
+    const double volume = pow(xy_sampling_resolution, 2) * z_sampling_resolution;
+
+    // Create candidate transforms.
+    for (double x = xRange.first; x <= xRange.second; x += xy_sampling_resolution) {
+      for (double y = yRange.first; y <= yRange.second; y += xy_sampling_resolution) {
+        for (double z = zRange.first; z <= zRange.second; z += z_sampling_resolution) {
+          XYZTransform transform(x, y, z, volume);
+          transforms->push_back(transform);
+        }
+      }
+    }
   }
 }
 

@@ -5,16 +5,16 @@
  *      Author: davheld
  */
 
-#ifndef LFDISCRETE3D_H_
-#define LFDISCRETE3D_H_
-
-#include <boost/shared_ptr.hpp>
+#ifndef LF_RGBD_6D_H_
+#define LF_RGBD_6D_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
 #include "motion_model.h"
+#include "scored_transform.h"
+#include "density_grid_tracker.h"
 
 // A 6D transform
 struct Transform6D {
@@ -46,30 +46,19 @@ public:
   LF_RGBD_6D ();
   virtual ~LF_RGBD_6D();
 
-  void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr prev_points);
+  void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
 
-  // Estimate the amount that a point cloud has moved.
-  // Inputs:
-  // A translation step size, and a range for each translation value
-  // (min value, max value) in meters.
-  // A rotation step size, and a range for each rotation value
-  // (min value, max value) in meters.
-  void track(
-      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr current_points,
+  void score3DTransforms(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const Eigen::Vector3f& current_points_centroid,
       const double xy_sampling_resolution,
       const double z_sampling_resolution,
       const double sensor_horizontal_resolution,
       const double sensor_vertical_resolution,
       const double down_sample_factor,
-      const std::pair <double, double>& xRange,
-      const std::pair <double, double>& yRange,
-      const std::pair <double, double>& zRange,
-      const std::pair <double, double>& rollRange,
-      const std::pair <double, double>& pitchRange,
-      const std::pair <double, double>& yawRange,
+      const std::vector<XYZTransform>& transforms,
       const MotionModel& motion_model,
-      ScoredTransforms<ScoredTransform6D>* scored_transforms);
+      ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   // Score each ofthe xyz transforms.
   void score6DTransforms(
@@ -85,24 +74,10 @@ public:
       ScoredTransforms<ScoredTransform6D>* scored_transforms);
 
 private:
-  void createCandidateTransforms(
-      const double xy_step_size,
-      const double z_step_size,
-      const double roll_step_size,
-      const double pitch_step_size,
-      const double yaw_step_size,
-      std::pair <double, double>& xRange,
-      std::pair <double, double>& yRange,
-      std::pair <double, double>& zRange_orig,
-      const std::pair <double, double>& rollRange,
-      const std::pair <double, double>& pitchRange,
-      const std::pair <double, double>& yawRange,
-      std::vector<Transform6D>* transforms);
-
   // Get the likelihood field score of the transform applied to the
   // current points.
   double getLogProbability(
-      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const Eigen::Vector3f& current_points_centroid,
       const MotionModel& motion_model,
       const double delta_x,
@@ -165,4 +140,4 @@ private:
   double prob_color_match_;
 };
 
-#endif /* LFDISCRETE3D_H_ */
+#endif /* LF_RGBD_6D_H_ */

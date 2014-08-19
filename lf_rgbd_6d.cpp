@@ -21,6 +21,8 @@
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
 
+#include "density_grid_tracker.h"
+
 using std::max;
 using std::min;
 using std::pair;
@@ -50,7 +52,7 @@ const double kMinMeasurementVariance = getenv("MIN_MEASUREMENT_VAR") ? atof(gete
 // We add this to our Gaussian so we don't give 0 probability to points
 // that don't align.
 // We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
-const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTHING_FACTOR")) : 1;
+const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTHING_FACTOR")) : 0.8;
 
 // We multiply our log measurement probability by this factor, to decrease
 // our confidence in the measurement model (e.g. to take into account
@@ -60,7 +62,7 @@ const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? at
 // Approximation factor for finding the nearest neighbor.
 // Set to 0 to find the exact nearest neighbor.
 // For a reasonable speedup, set to 2.
-const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 0;
+const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 2;
 
 // -----Color Parameters----
 
@@ -71,27 +73,27 @@ const bool kUseColor = true;
 const bool kTwoColors = false;
 
 // The parameter to use for our color Laplacian for color 1.
-const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 15;
+const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 13.9;
 
 // The parameter to use for our color Laplacian for color 2.
-const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15;
+const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15.2;
 
 // How much we expect the colors to match (there might have been lens flare,
 // the lighting might have changed, etc. which would cause all the colors
 // to be completely wrong).
-const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.5;
+const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.05;
 
 // How much to care about color as a function of the particle sampling resolution.
 // When we are sampling sparsely, we do not expect the colors to align well.
 // Set to 0 to ignore this term.
 // If non-zero, we set prob_color_match_ = kProbColorMatch *
 //    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
-const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 0;
+const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 10;
 
 // Which color space to use for our color matches.
 // 0: Use blue and green,
 // 1: Use (R + G + B) / 3.
-const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 1;
+const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 0;
 
 } // namespace
 
@@ -113,7 +115,7 @@ LF_RGBD_6D::~LF_RGBD_6D() {
 }
 
 void LF_RGBD_6D::setPrevPoints(
-    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr prev_points) {
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points) {
   prev_points_ = prev_points;
 
   // Set the input cloud for the search tree to the previous points for NN
@@ -178,109 +180,47 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
   }
 }
 
-void LF_RGBD_6D::createCandidateTransforms(
-    const double xy_step_size,
-    const double z_step_size,
-    const double roll_step_size,
-    const double pitch_step_size,
-    const double yaw_step_size,
-    std::pair <double, double>& xRange,
-    std::pair <double, double>& yRange,
-    std::pair <double, double>& zRange_orig,
-    const std::pair <double, double>& rollRange,
-    const std::pair <double, double>& pitchRange,
-    const std::pair <double, double>& yawRange,
-    std::vector<Transform6D>* transforms) {
-  printf("LF_RGBD_6D::createCandidateTransforms Not implemented yet");
-  exit(1);
-
-  // Make sure we hit 0 in our z range, in case the step is too large.
-  //const double z_step_size = fabs(zRange.first) > 0 ? min(z_step_size_orig, fabs(zRange.first)) : z_step_size_orig;
-  //printf("Initial: z Range: %lf to %lf\n", zRange_orig.first, zRange_orig.second);
-  /*std::pair<double, double> zRange;
-  if (z_step_size > fabs(zRange_orig.first)) {
-    zRange.first = 0;
-    zRange.second = 0;
-  } else {
-    zRange.first = zRange_orig.first;
-    zRange.second = zRange_orig.second;
-  }
-
-  // Compute the number of transforms along each direction.
-  const int num_x_locations = (xRange.second - xRange.first) / xy_step_size;
-  const int num_y_locations = (yRange.second - yRange.first) / xy_step_size;
-  int num_z_locations;
-  if (z_step_size == 0) {
-    num_z_locations = 1;
-  } else {
-    num_z_locations = (zRange.second - zRange.first) / z_step_size;
-  }
-
-  // Reserve space for all of the transforms.
-  transforms->reserve(num_x_locations * num_y_locations * num_z_locations);
-
-  const double volume = pow(xy_step_size, 2) * z_step_size;
-
-  // Create a list of candidate transforms.
-  for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
-    for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
-      XYZTransform transform(x, y, 0, volume);
-      transforms->push_back(transform);
-    }
-  }*/
-
-  /*if (z_step_size == 0) {
-    // Create a list of candidate transforms.
-    for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
-      for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
-        XYZTransform transform(x, y, zRange.first, volume);
-        transforms->push_back(transform);
-      }
-    }
-  } else {
-    // Create a list of candidate transforms.
-    for (double x = xRange.first; x <= xRange.second; x += xy_step_size){
-      for (double y = yRange.first; y <= yRange.second; y += xy_step_size){
-        for (double z = zRange.first; z <= zRange.second; z += z_step_size){
-          XYZTransform transform(x, y, z, volume);
-          transforms->push_back(transform);
-        }
-      }
-    }
-  }*/
-
-}
-
-
-void LF_RGBD_6D::track(
-    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr current_points,
+void LF_RGBD_6D::score3DTransforms(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& current_points_centroid,
     const double xy_sampling_resolution,
     const double z_sampling_resolution,
     const double sensor_horizontal_resolution,
     const double sensor_vertical_resolution,
     const double down_sample_factor,
-    const std::pair <double, double>& xRange,
-    const std::pair <double, double>& yRange,
-    const std::pair <double, double>& zRange,
-    const std::pair <double, double>& rollRange,
-    const std::pair <double, double>& pitchRange,
-    const std::pair <double, double>& yawRange,
+    const std::vector<XYZTransform>& transforms,
     const MotionModel& motion_model,
-    ScoredTransforms<ScoredTransform6D>* scored_transforms) {
-  // Find all candidate xyz transforms.
-  vector<Transform6D> transforms_6D;
-  // TODO - make 6D transforms.
+    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
+  // Initialize variables for tracking grid.
+  init(xy_sampling_resolution, z_sampling_resolution, sensor_horizontal_resolution,
+       sensor_vertical_resolution, down_sample_factor);
 
-  //DensityGridTracker3d::createCandidateXYZTransforms(xy_sampling_resolution, z_sampling_resolution,
-  //    xRange, yRange, zRange, &xyz_transforms);
+  const size_t num_transforms = transforms.size();
 
-  // Get scores for each of the xyz transforms.
-  score6DTransforms(
-        current_points, current_points_centroid,
-        xy_sampling_resolution, z_sampling_resolution,
-        sensor_horizontal_resolution, sensor_vertical_resolution,
-        down_sample_factor, transforms_6D, motion_model, scored_transforms);
+  // Compute scores for all of the transforms using the density grid.
+  scored_transforms->clear();
+  scored_transforms->resize(num_transforms);
+
+  // For a 3D transform, set the angular rotations to 0.
+  const double roll = 0;
+  const double pitch = 0;
+  const double yaw = 0;
+
+  for(size_t i = 0; i < num_transforms; ++i){
+    const XYZTransform& transform = transforms[i];
+    const double x = transform.x;
+    const double y = transform.y;
+    const double z = transform.z;
+    const double volume = transform.volume;
+
+    const double log_prob = getLogProbability(
+          current_points, current_points_centroid, motion_model,
+          x, y, z, roll, pitch, yaw);
+
+    // Save the complete transform with its log probability.
+    const ScoredTransformXYZ scored_transform(x, y, z, log_prob, volume);
+    scored_transforms->set(scored_transform, i);
+  }
 }
 
 void LF_RGBD_6D::score6DTransforms(
@@ -364,7 +304,7 @@ void LF_RGBD_6D::makeEigenTransform(
 }
 
 double LF_RGBD_6D::getLogProbability(
-    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& current_points_centroid,
     const MotionModel& motion_model,
     const double delta_x,

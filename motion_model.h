@@ -57,19 +57,6 @@ public:
 	// Add centroid diff and update the Kalman filter.
 	void addCentroidDiff(const Eigen::Vector3f& centroid_diff, const double& time_diff);
 
-	// Add centroid diff and compute updated mean and covariance, but do not
-	// update the internal data.
-	void addCentroidDiffNoUpdate(
-	    const Eigen::Vector3f& centroid_diff,
-	    const double& recorded_time_diff,
-	    Eigen::Vector3d* mean_velocity,
-	    Eigen::Matrix3d* covariance_velocity) const;
-
-	void addAlignment(
-	    Eigen::Affine3f full_alignment_to_prev,
-	    const double& recorded_time_diff,
-	    const double& horizontal_distance);
-
 	void propagate(const double& time_diff);
 	double computeScore(const TransformComponents& components) const;
 

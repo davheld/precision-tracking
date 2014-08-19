@@ -79,38 +79,38 @@ const bool kUseMotion = true;
 // -----Color Parameters----
 
 // Whether to use color in our measurement model.
-const bool kUseColor = false;
+const bool kUseColor = true;
 
 // Whether to use two colors in our measurement model.
 const bool kTwoColors = false;
 
 // The parameter to use for our color Laplacian for color 1.
-const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 15;
+const double kValueSigma1 = getenv("VALUE_SIGMA") ? atof(getenv("VALUE_SIGMA")) : 13.9;
 
 // The parameter to use for our color Laplacian for color 2.
-const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15;
+const double kValueSigma2 = getenv("VALUE_SIGMA2") ? atof(getenv("VALUE_SIGMA2")) : 15.2;
 
 // How much we expect the colors to match (there might have been lens flare,
 // the lighting might have changed, etc. which would cause all the colors
 // to be completely wrong).
-const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.5;
+const double kProbColorMatch = getenv("PROB_COLOR_MATCH") ? atof(getenv("PROB_COLOR_MATCH")) : 0.05;
 
 // How much to care about color as a function of the particle sampling resolution.
 // When we are sampling sparsely, we do not expect the colors to align well.
 // Set to 0 to ignore this term.
 // If non-zero, we set prob_color_match_ = kProbColorMatch *
 //    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
-const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 0;
+const double kColorThreshFactor = getenv("COLOR_THRESH_FACTOR") ? atof(getenv("COLOR_THRESH_FACTOR")) : 10;
 
 // Which color space to use for our color matches.
 // 0: Use blue and green,
 // 1: Use (R + G + B) / 3.
-const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 1;
+const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 0;
 
 // ------------------
 
 // Use caching, unless we use color, in which case we can't use caching.
-const bool use_caching = true;
+const bool use_caching = !kUseColor;
 
 /*const bool kUse_annealing = getenv("USE_ANNEALING");
 
@@ -401,34 +401,6 @@ LFDiscrete3d::~LFDiscrete3d() {
   // TODO Auto-generated destructor stub
 }
 
-void LFDiscrete3d::track(
-    const double& xy_stepSize,
-    const double& z_stepSize,
-    const pair <double, double>& xRange,
-    const pair <double, double>& yRange,
-    const pair <double, double>& zRange,
-    const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > current_points,
-    const Eigen::Vector3f &current_points_centroid,
-    const MotionModel& motion_model,
-    const double horizontal_distance,
-    const double down_sample_factor,
-    ScoredTransforms<ScoredTransformXYZ>* transforms) {
-
-  //printf("Xy step: %lf, z step: %lf\n", xy_stepSize, z_stepSize);
-
-  // Find all candidate xyz transforms.
-  vector<XYZTransform> xyz_transforms;
-  DensityGridTracker::createCandidateXYZTransforms(xy_stepSize, z_stepSize,
-      xRange, yRange, zRange, &xyz_transforms);
-
-  // Get scores for each of the xyz transforms.
-  scoreXYZTransforms(
-      current_points,
-      xy_stepSize, z_stepSize,
-      xyz_transforms, motion_model, horizontal_distance, down_sample_factor,
-      transforms);
-}
-
 void LFDiscrete3d::scoreXYZTransforms(
     const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
     const double xy_stepSize,
@@ -635,7 +607,6 @@ double LFDiscrete3d::get_log_prob(
 
 double LFDiscrete3d::computeColorProb(const pcl::PointXYZRGB& prev_pt,
     const pcl::PointXYZRGB& pt, const double point_match_prob_spatial_i) const {
-  printf("Using color\n");
   const double factor1 = min_occupancy_ / (min_occupancy_ + 1);
 
   double use_k2;
@@ -649,11 +620,12 @@ double LFDiscrete3d::computeColorProb(const pcl::PointXYZRGB& prev_pt,
   }
 
   // Find the colors from the 2 points.
-  double color1 = 0, color2 = 0, color3 = 0, color4 = 0;
+  int color1 = 0, color2 = 0, color3 = 0, color4 = 0;
   if (kColorSpace == 0) {
     // Blue and Green.
     color1 = pt.b;
     color2 = prev_pt.b;
+    //printf("Colors: %d, %d\n", color1, color2);
 
     color3 = pt.g;
     color4 = prev_pt.g;
@@ -667,6 +639,7 @@ double LFDiscrete3d::computeColorProb(const pcl::PointXYZRGB& prev_pt,
   }
 
   const double color_distance1 = fabs(color1 - color2);
+  //printf("Color distance: %lf\n", color_distance1);
 
   double point_match_prob;
   if (kTwoColors) {

@@ -37,27 +37,9 @@ public:
   void setPrevPoints(
       const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > prev_points);
 
-  // Estimate the amount that a point cloud has moved.
-  // Inputs:
-  // A translation step size, and a range for each translation value
-  // (min value, max value) in meters.
-  // A rotation step size, and a range for each rotation value
-  // (min value, max value) in meters.
-  void track(
-      const double& xy_stepSize,
-      const double& z_stepSize,
-      const std::pair <double, double>& xRange,
-      const std::pair <double, double>& yRange,
-      const std::pair <double, double>& zRange,
-      const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > current_points,
-      const Eigen::Vector3f &current_points_centroid,
-      const MotionModel& motion_model,
-      const double horizontal_distance,
-      const double down_sample_factor,
-      ScoredTransforms<ScoredTransformXYZ>* transforms);
-
-  // Score each ofthe xyz transforms.
-  virtual void scoreXYZTransforms(
+  // Compute the probability of each of the transforms being the
+  // correct alignment of the current points to the previous points.
+  void scoreXYZTransforms(
       const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
       const double xy_stepSize,
       const double z_stepSize,

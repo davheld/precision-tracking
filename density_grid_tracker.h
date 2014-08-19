@@ -35,27 +35,8 @@ public:
       return instance;
   }
 
-  // Estimate the amount that a point cloud has moved.
-  // Inputs:
-  // A translation step size, and a range for each translation value
-  // (min value, max value) in meters.
-  // A rotation step size, and a range for each rotation value
-  // (min value, max value) in meters.
-  void track(
-      const double xy_sampling_resolution,
-      const double z_sampling_resolution,
-      const std::pair <double, double>& xRange,
-      const std::pair <double, double>& yRange,
-      const std::pair <double, double>& zRange,
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-      const Eigen::Vector3f& current_points_centroid,
-      const MotionModel& motion_model,
-      const double xy_sensor_resolution,
-      const double z_sensor_resolution,
-      ScoredTransforms<ScoredTransformXYZ>* transforms);
-
-  // Score each ofthe xyz transforms.
+  // Compute the probability of each of the transforms being the
+  // correct alignment of the current points to the previous points.
   void scoreXYZTransforms(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
@@ -66,15 +47,6 @@ public:
       const double xy_sensor_resolution,
       const double z_sensor_resolution,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
-
-  // Create a list of candidate xyz transforms.
-  static void createCandidateXYZTransforms(
-      const double xy_sampling_resolution,
-      const double z_sampling_resolution,
-      const std::pair <double, double>& xRange,
-      const std::pair <double, double>& yRange,
-      const std::pair <double, double>& zRange,
-      std::vector<XYZTransform>* transforms);
 
 private:
   DensityGridTracker();

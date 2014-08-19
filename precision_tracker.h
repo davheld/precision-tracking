@@ -13,9 +13,7 @@
 #include <pcl/point_cloud.h>
 #include "scored_transform.h"
 #include "motion_model.h"
-//#include "ap_tracker.h"
-#include "ap_tracker3d.h"
-//#include "density_grid_tracker.h"
+#include "adh_tracker3d.h"
 #include "density_grid_tracker.h"
 
 class PrecisionTracker {
@@ -39,7 +37,7 @@ public:
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModelPtr);
 
 private:
-  void findBestLocation(
+  void track(
       boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
       const double max_xy_stepSize,
       const double max_z_stepSize,
@@ -53,10 +51,7 @@ private:
       const double horizontal_distance,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
-  APTracker3d ap_tracker3d_;
-  //const FastFunctions& fast_functions_;
-
-
+  ADHTracker3d adh_tracker3d_;
 };
 
 #endif /* PRECISION_TRACKER_H_ */

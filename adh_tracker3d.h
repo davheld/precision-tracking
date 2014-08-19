@@ -1,13 +1,19 @@
-/* Probabilistic Filtering Tracker
- *
- * ap_tracker.h
+/*
+ * adh_tracker3d.h
  *
  *  Created on: Sep 1, 2013
  *      Author: davheld
+ *
+ * Annealed dynamic histogram tracker
+ * Starts by coarsely sampling from the state space, while inflating
+ * the measurement model to avoid local minima.  We then sample more
+ * finely, and anneal the measurement model accordingly, until
+ * we are sampling finely and using the true measurement model.
+ *
  */
 
-#ifndef AP_TRACKER_3D_H_
-#define AP_TRACKER_3D_H_
+#ifndef ADH_TRACKER_3D_H_
+#define ADH_TRACKER_3D_H_
 
 #include <utility>
 
@@ -18,16 +24,14 @@
 #include "motion_model.h"
 #include "scored_transform.h"
 #include "density_grid_tracker.h"
-//#include "NNTracker3d.h"
 #include "lf_discrete_3d.h"
+#include "lf_rgbd_6d.h"
 #include "fast_functions.h"
 
-// Approximate probabilistic tracker - successively computes approximations
-// to the posterior probability of each alignment.
-class APTracker3d {
+class ADHTracker3d {
 public:
-  APTracker3d();
-	virtual ~APTracker3d();
+  ADHTracker3d();
+  virtual ~ADHTracker3d();
 
 	void track(
       const double initial_xy_sampling_resolution,
@@ -46,6 +50,15 @@ public:
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 private:
+  // Create a list of candidate xyz transforms.
+  void createCandidateXYZTransforms(
+      const double xy_sampling_resolution,
+      const double z_sampling_resolution,
+      const std::pair <double, double>& xRange,
+      const std::pair <double, double>& yRange,
+      const std::pair <double, double>& zRange_orig,
+      std::vector<XYZTransform>* transforms) const;
+
 	void recomputeProbs(
 	    const double prior_prob,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const;
@@ -57,8 +70,9 @@ private:
       double* total_recomputing_prob) const;
 
   LFDiscrete3d& lf_discrete_3d_;
+  LF_RGBD_6D lf_rgbd_6d_;
   DensityGridTracker& density_grid_tracker_;
   const FastFunctions& fast_functions_;
 };
 
-#endif /* AP_TRACKER_3D_H_ */
+#endif /* ADH_TRACKER_3D_H_ */

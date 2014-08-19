@@ -101,7 +101,7 @@ PrecisionTracker::~PrecisionTracker() {
 
 //for each x, y, z:
 //best, min, max, stepsize, numsteps?
-void PrecisionTracker::findBestLocation(
+void PrecisionTracker::track(
     boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
     const double initial_xy_sampling_resolution,
     const double initial_z_sampling_resolution,
@@ -122,7 +122,6 @@ void PrecisionTracker::findBestLocation(
     DownSampler::downSamplePointsDeterministic(current_points, kCurrFrameDownsample, downSampledPoints1);
   }
 
-  // TODO - pass this as an input parameter.
   // Compute the sensor horizontal resolution
   const double velodyne_horizontal_res_actual = 2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
 
@@ -132,9 +131,7 @@ void PrecisionTracker::findBestLocation(
   // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
   const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
 
-  // For efficiency, we assume no motion in the z-direction.
-
-  ap_tracker3d_.track(
+  adh_tracker3d_.track(
         initial_xy_sampling_resolution, initial_z_sampling_resolution,
         xRange, yRange, zRange,
         downSampledPoints1, prev_points, current_points_centroid,
@@ -151,6 +148,7 @@ void PrecisionTracker::track(
     const double horizontal_distance,
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
+  // Down-sample the previous points.
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previous_model_downsampled(new pcl::PointCloud<pcl::PointXYZRGB>);
   if (stochastic_downsample){
     DownSampler::downSamplePointsStochastic(previousModel, kPrevFrameDownsample, previous_model_downsampled);
@@ -158,6 +156,8 @@ void PrecisionTracker::track(
     DownSampler::downSamplePointsDeterministic(previousModel, kPrevFrameDownsample, previous_model_downsampled);
   }
 
+  // Compute the ratio by which we down-sampled, which decreases the effective
+  // resolution.
   const double down_sample_factor_prev =
       static_cast<double>(previous_model_downsampled->size()) /
       static_cast<double>(previousModel->size());
@@ -181,7 +181,7 @@ void PrecisionTracker::track(
   Eigen::Vector3f current_points_centroid;
   computeCentroid(current_points, &current_points_centroid);
 
-  findBestLocation(current_points, kInitialXYSamplingResolution, kInitialZSamplingResolution, xRange, yRange, zRange,
+  track(current_points, kInitialXYSamplingResolution, kInitialZSamplingResolution, xRange, yRange, zRange,
                    previous_model_downsampled,
       current_points_centroid, motion_model, down_sample_factor_prev,
       horizontal_distance, scored_transforms);
