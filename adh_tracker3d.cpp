@@ -19,7 +19,7 @@ using std::max;
 namespace {
 
 // Whether to include color probabilities when performing the alignment.
-const bool use_color = false;
+const bool use_color = true;
 
 // Whether to use the density grid tracker (pre-caching) or the lf_tracker
 // (post-caching).  The LF_tracker is slightly more accurate but about

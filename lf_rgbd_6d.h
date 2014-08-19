@@ -15,6 +15,7 @@
 #include "motion_model.h"
 #include "scored_transform.h"
 #include "density_grid_tracker.h"
+#include "alignment_evaluator.h"
 
 // A 6D transform
 struct Transform6D {
@@ -41,7 +42,7 @@ public:
   double volume;
 };
 
-class LF_RGBD_6D {
+class LF_RGBD_6D : public AlignmentEvaluator {
 public:
   LF_RGBD_6D ();
   virtual ~LF_RGBD_6D();
@@ -108,24 +109,8 @@ private:
       const double roll, const double pitch, const double yaw,
       Eigen::Affine3f* transform) const;
 
-  // Previous points for alignment.
-  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points_;
-
   // Search tree from the previous points.
   pcl::KdTreeFLANN<pcl::PointXYZRGB> searchTree_;
-
-  // Sampling resolution in our particle space.
-  double xy_sampling_resolution_;
-  double z_sampling_resolution_;
-
-  // Covariance parameters for the measurement model.
-  double xy_exp_factor_;
-  double z_exp_factor_;
-  double xyz_exp_factor_;
-  bool isotropic_;
-
-  // Smoothing factor for the measurement model.
-  double smoothing_factor_;
 
   // The number of nearest neighbors to find.
   const int max_nn_;

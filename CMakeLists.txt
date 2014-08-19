@@ -21,5 +21,5 @@ add_executable (tracker tracker.cpp track_manager_color.cpp model_builder.cpp
   fast_functions.cpp precision_tracker.cpp model_builder.cpp motion_model.cpp
   transform_helper.cpp adh_tracker3d.cpp down_sampler.cpp lf_discrete_3d.cpp
   scored_transform.cpp density_grid_tracker.cpp lf_rgbd_6d.cpp
-  high_res_timer.cpp)
+  high_res_timer.cpp alignment_evaluator.cpp)
 target_link_libraries (tracker ${PCL_LIBRARIES})

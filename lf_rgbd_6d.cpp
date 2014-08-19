@@ -30,39 +30,10 @@ using std::vector;
 
 namespace {
 
-// If true, we add a term to the measurement covariance based on the spacing between
-// particles.
-const bool kUse_annealing = true;
-
-// Factor to multiply the sensor resolution for our measurement model.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
-const double kSigmaFactor = getenv("SIGMA_FACTOR") ? atof(getenv("SIGMA_FACTOR")) : 0.5;
-
-// Factor to multiply the particle sampling resolution for our measurement  model.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
-const double kSigmaGridFactor = getenv("SIGMA_GRID_FACTOR") ? atof(getenv("SIGMA_GRID_FACTOR")) : 1;
-
-// The noise in our sensor which is independent of the distance to the tracked object.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = kMinMeasurementVariance^2 + other terms.
-const double kMinMeasurementVariance = getenv("MIN_MEASUREMENT_VAR") ? atof(getenv("MIN_MEASUREMENT_VAR")) : 0.03;
-
-// We add this to our Gaussian so we don't give 0 probability to points
-// that don't align.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
-const double kSmoothingFactor = getenv("SMOOTHING_FACTOR") ? atof(getenv("SMOOTHING_FACTOR")) : 0.8;
-
-// We multiply our log measurement probability by this factor, to decrease
-// our confidence in the measurement model (e.g. to take into account
-// dependencies between neighboring points).
-const double kMeasurementDiscountFactor = getenv("MEASUREMENT_DISCOUNT_3D") ? atof(getenv("MEASUREMENT_DISCOUNT_3D")) : 1;
-
 // Approximation factor for finding the nearest neighbor.
 // Set to 0 to find the exact nearest neighbor.
 // For a reasonable speedup, set to 2.
-const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 0;
+const double kSearchTreeEpsilon = getenv("SEARCH_TREE_EPSILON") ? atof(getenv("SEARCH_TREE_EPSILON")) : 2;
 
 // -----Color Parameters----
 
@@ -101,7 +72,6 @@ const int kColorSpace = getenv("COLOR_SPACE") ? atoi(getenv("COLOR_SPACE")) : 0;
 LF_RGBD_6D::LF_RGBD_6D()
     : searchTree_(false),  //  //By setting sorted to false,
                                 // the radiusSearch operations will be faster.
-      smoothing_factor_(kSmoothingFactor),
       max_nn_(1),
       nn_indices_(max_nn_),
       nn_sq_dists_(max_nn_),
@@ -116,7 +86,7 @@ LF_RGBD_6D::~LF_RGBD_6D() {
 
 void LF_RGBD_6D::setPrevPoints(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points) {
-  prev_points_ = prev_points;
+  AlignmentEvaluator::setPrevPoints(prev_points);
 
   // Set the input cloud for the search tree to the previous points for NN
   // lookups.
@@ -131,44 +101,9 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
           const double sensor_horizontal_resolution,
           const double sensor_vertical_resolution,
           const double down_sample_factor) {
-  xy_sampling_resolution_ = xy_sampling_resolution;
-  z_sampling_resolution_ = z_sampling_resolution;
-
-  // Because of downsampling, the effective resoluton of the sensor
-  // can be different from the actual resolution.
-  /*const double sensor_horizontal_resolution_effective =
-      sensor_horizontal_resolution / down_sample_factor;
-  const double sensor_vertical_resolution_effective =
-      sensor_vertical_resolution / down_sample_factor;*/
-
-  // Compute the expected spatial variance in the x and y directions.
-  const double error1_xy =
-      kUse_annealing ? kSigmaGridFactor * xy_sampling_resolution_ : 0;
-  const double error2_xy =
-      sensor_horizontal_resolution * kSigmaFactor;
-  const double sigma_xy = sqrt(pow(error1_xy, 2) + pow(error2_xy, 2) +
-                               pow(kMinMeasurementVariance, 2));
-
-
-  const double error1_z =
-      kUse_annealing ? kSigmaGridFactor * z_sampling_resolution_ : 0;
-  const double error2_z =
-      sensor_vertical_resolution * kSigmaFactor;
-  const double sigma_z = sqrt(pow(error1_z, 2) + pow(error2_z, 2) +
-                              pow(kMinMeasurementVariance, 2));
-
-
-  // Convert the variance to a factor such that
-  // exp(-x^2 / 2 sigma^2) = exp(x^2 * factor)
-  // where x is the distance.
-  xy_exp_factor_ = -1.0 / (2 * pow(sigma_xy, 2));
-  z_exp_factor_ = -1.0 / (2 * pow(sigma_z, 2));
-  xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy, 2)) + pow(sigma_z, 2));
-  isotropic_ = (xy_exp_factor_ == z_exp_factor_);
-
-  //printf("Sampling res: %lf, error1_xy: %lf, sensor_horizontal_resolution: %lf, error2_xy: %lf, sigma_xy: %lf, xy_exp_factor_: %lf\n", xy_sampling_resolution_,
-  //       error1_xy, sensor_horizontal_resolution, error2_xy, sigma_xy, xy_exp_factor_);
-
+  AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
+                           sensor_horizontal_resolution,
+                           sensor_vertical_resolution, down_sample_factor);
 
   // Compute the total particle sampling resolution
   const double sampling_resolution = sqrt(pow(xy_sampling_resolution_, 2) +
@@ -319,18 +254,18 @@ double LF_RGBD_6D::getLogProbability(
     const double pitch,
     const double yaw) {
   // Make a new cloud to store the transformed cloud for the current points.
-  /*pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_current_points(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_current_points(
       new pcl::PointCloud<pcl::PointXYZRGB>);
 
   // Make the desired transform.
   Eigen::Affine3f transform;
-  //makeEigenTransform(current_points_centroid, delta_x, delta_y, delta_z, roll,
-  //                   pitch, yaw, &transform);
-  transform = Eigen::Translation<float,3>(delta_x, delta_y, delta_z);
+  makeEigenTransform(current_points_centroid, delta_x, delta_y, delta_z, roll,
+                     pitch, yaw, &transform);
+  //transform = Eigen::Translation<float,3>(delta_x, delta_y, delta_z);
 
   // Transform the cloud.
   pcl::transformPointCloud(*current_points, *transformed_current_points,
-                           transform);*/
+                           transform);
 
   // Total log measurement probability.
   double log_measurement_prob = 0;
@@ -341,25 +276,7 @@ double LF_RGBD_6D::getLogProbability(
   const size_t num_points = current_points->size();
   for (size_t i = 0; i < num_points; ++i) {
     // Extract the point so we can compute its score.
-    const pcl::PointXYZRGB& current_pt_unshifted = (*current_points)[i];
-    pcl::PointXYZRGB current_pt;
-
-    current_pt.x = current_pt_unshifted.x + delta_x;
-    current_pt.y = current_pt_unshifted.y + delta_y;
-    current_pt.z = current_pt_unshifted.z + delta_z;
-    current_pt.rgb = current_pt_unshifted.rgb;
-
-
-    //const pcl::PointXYZRGB& current_pt = (*transformed_current_points)[i];
-
-    /*printf("points: x: %lf, %lf, y: %lf, %lf, z: %lf, %lf\n",
-           current_pt.x, current_pt_unshifted.x,
-           current_pt.y, current_pt_unshifted.y,
-           current_pt.z, current_pt_unshifted.z);
-    printf("colors: x: %d, %d, y: %d, %d, z: %d, %d\n",
-           current_pt.r, current_pt_unshifted.r,
-           current_pt.g, current_pt_unshifted.g,
-           current_pt.b, current_pt_unshifted.b);*/
+    const pcl::PointXYZRGB& current_pt = (*transformed_current_points)[i];
 
     // Compute the probability.
     log_measurement_prob += get_log_prob(current_pt);
@@ -372,7 +289,7 @@ double LF_RGBD_6D::getLogProbability(
   // Combine the motion model score with the (discounted) measurement score to
   // get the final log probability.
   const double log_prob = log(motion_model_prob) +
-      kMeasurementDiscountFactor * log_measurement_prob;
+      measurement_discount_factor_ * log_measurement_prob;
 
   return log_prob;
 }
