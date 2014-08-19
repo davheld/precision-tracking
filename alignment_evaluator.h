@@ -21,6 +21,8 @@ public:
   virtual void setPrevPoints(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
 
+  // Compute the probability of each of the transforms being the
+  // correct alignment of the current points to the previous points.
   virtual void score3DTransforms(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const Eigen::Vector3f& current_points_centroid,

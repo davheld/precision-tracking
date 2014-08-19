@@ -48,14 +48,12 @@ const double kSmoothingFactor = 0.8;
 // dependencies between neighboring points).
 const double kMeasurementDiscountFactor = 1;
 
-const bool k_NNTracking = false;
-
 // Total size = 3.7 GB
 // At a resolution of 1.2 cm, a 10 m wide object will take 1000 cells.
-const int kMaxXSize = k_NNTracking ? 1 : 1000;
-const int kMaxYSize = k_NNTracking ? 1 : 1000;
+const int kMaxXSize = 1000;
+const int kMaxYSize = 1000;
 // At a resolution of 1.2 cm, a 5 m tall object will take 500 cells.
-const int kMaxZSize = k_NNTracking ? 1 : 500;
+const int kMaxZSize = 500;
 
 using std::vector;
 using std::pair;
@@ -75,40 +73,19 @@ DensityGridTracker::~DensityGridTracker() {
 	// TODO Auto-generated destructor stub
 }
 
-void DensityGridTracker::scoreXYZTransforms(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-    const double xy_sampling_resolution,
-    const double z_sampling_resolution,
-    const vector<XYZTransform>& transforms,
-    const MotionModel& motion_model,
-    const double xy_sensor_resolution,
-    const double z_sensor_resolution,
-    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
+void DensityGridTracker::init(const double xy_sampling_resolution,
+          const double z_sampling_resolution,
+          const double sensor_horizontal_resolution,
+          const double sensor_vertical_resolution) {
+  AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
+                           sensor_horizontal_resolution,
+                           sensor_vertical_resolution);
+
   computeDensityGridParameters(
-        prev_points, xy_sampling_resolution, z_sampling_resolution,
-        xy_sensor_resolution, z_sensor_resolution);
+        prev_points_, xy_sampling_resolution, z_sampling_resolution,
+        sensor_horizontal_resolution, sensor_vertical_resolution);
 
-  computeDensityGrid(prev_points);
-
-  // Compute scores for all of the transforms using the density grid.
-  const size_t num_transforms = transforms.size();
-  scored_transforms->clear();
-  scored_transforms->reserve(num_transforms);
-  for(size_t i = 0; i < num_transforms; ++i){
-    const XYZTransform& transform = transforms[i];
-    const double x = transform.x;
-    const double y = transform.y;
-    const double z = transform.z;
-    const double volume = transform.volume;
-
-    const double log_prob = getLogProbability(current_points, min_pt_,
-        xy_grid_step_, z_grid_step_, motion_model, x, y, z);
-
-    // Save the complete transform with its log probability.
-    const ScoredTransformXYZ scored_transform(x, y, z, log_prob, volume);
-    scored_transforms->addScoredTransform(scored_transform);
-  }
+  computeDensityGrid(prev_points_);
 }
 
 void DensityGridTracker::computeDensityGridParameters(
@@ -335,20 +312,16 @@ void DensityGridTracker::computeDensityGrid(
 
 double DensityGridTracker::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-		const pcl::PointXYZRGB& minPt,
-    const double xy_gridStep,
-    const double z_gridStep,
-		const MotionModel& motion_model,
-		const double x,
-		const double y,
-    const double z) const {
+    const Eigen::Vector3f& ,
+    const MotionModel& motion_model,
+    const double x, const double y, const double z) {
   // Amount of total log probability density for the given alignment.
   double total_log_density = 0;
 
   // Offset to apply to each point to get the new position.
-	const double x_offset = (x - minPt.x) / xy_gridStep;
-	const double y_offset = (y - minPt.y) / xy_gridStep;
-  const double z_offset = (z - minPt.z) / z_gridStep;
+  const double x_offset = (x - min_pt_.x) / xy_grid_step_;
+  const double y_offset = (y - min_pt_.y) / xy_grid_step_;
+  const double z_offset = (z - min_pt_.z) / z_grid_step_;
 
   // Iterate over every point and look up its log probability density
   // in the density grid.
@@ -362,13 +335,13 @@ double DensityGridTracker::getLogProbability(
     // divide by the grid step to find the appropriate cell in the density
     // grid.
     const int x_index_shifted =
-        min(max(0, static_cast<int>(round(pt.x / xy_gridStep + x_offset))),
+        min(max(0, static_cast<int>(round(pt.x / xy_grid_step_ + x_offset))),
             xSize_ - 1);
     const int y_index_shifted =
-        min(max(0, static_cast<int>(round(pt.y / xy_gridStep + y_offset))),
+        min(max(0, static_cast<int>(round(pt.y / xy_grid_step_ + y_offset))),
             ySize_ - 1);
     const int z_index_shifted =
-        min(max(0, static_cast<int>(round(pt.z / z_gridStep + z_offset))),
+        min(max(0, static_cast<int>(round(pt.z / z_grid_step_ + z_offset))),
             zSize_ - 1);
 
     // Look up the log density of this grid cell and add to the total density.

@@ -25,25 +25,23 @@ struct ScoredTransform;
 struct XYZTransform;
 class MotionModel;
 
-class DensityGridTracker {
+class DensityGridTracker : public AlignmentEvaluator {
 public:
   DensityGridTracker();
   virtual ~DensityGridTracker();
 
-  // Compute the probability of each of the transforms being the
-  // correct alignment of the current points to the previous points.
-  void scoreXYZTransforms(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-      const double xy_sampling_resolution,
-      const double z_sampling_resolution,
-      const std::vector<XYZTransform>& transforms,
-      const MotionModel& motion_model,
-      const double xy_sensor_resolution,
-      const double z_sensor_resolution,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
-
 private:
+  void init(const double xy_sampling_resolution,
+            const double z_sampling_resolution,
+            const double sensor_horizontal_resolution,
+            const double sensor_vertical_resolution);
+
+  double getLogProbability(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+      const Eigen::Vector3f& current_points_centroid,
+      const MotionModel& motion_model,
+      const double x, const double y, const double z);
+
   void computeDensityGridParameters(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
       const double xy_sampling_resolution,

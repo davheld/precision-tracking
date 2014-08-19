@@ -52,6 +52,7 @@ private:
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
   ADHTracker3d adh_tracker3d_;
+  boost::shared_ptr<AlignmentEvaluator> alignment_evaluator_;
 };
 
 #endif /* PRECISION_TRACKER_H_ */
