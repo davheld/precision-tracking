@@ -4,10 +4,10 @@
  *  Created on: Sep 1, 2013
  *      Author: davheld
  *
- * Annealed dynamic histogram tracker
+ * Annealed dynamic histogram tracker.
  * Starts by coarsely sampling from the state space, while inflating
  * the measurement model to avoid local minima.  We then sample more
- * finely, and anneal the measurement model accordingly, until
+ * finely and anneal the measurement model accordingly, until
  * we are sampling finely and using the true measurement model.
  *
  */
@@ -17,30 +17,28 @@
 
 #include <utility>
 
-#include <boost/shared_ptr.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+#include "alignment_evaluator.h"
 #include "motion_model.h"
 #include "scored_transform.h"
-#include "density_grid_tracker.h"
-#include "lf_discrete_3d.h"
-#include "lf_rgbd_6d.h"
-#include "fast_functions.h"
 
 class ADHTracker3d {
 public:
   ADHTracker3d();
   virtual ~ADHTracker3d();
 
+  // Estimate the posterior distribution over alignments sampled from the
+  // proposed range in xRange, yRange, zRange.
 	void track(
       const double initial_xy_sampling_resolution,
       const double initial_z_sampling_resolution,
       const std::pair <double, double>& xRange,
 	    const std::pair <double, double>& yRange,
 	    const std::pair <double, double>& zRange,
-	    const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > current_points,
-	    const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
 	    const Eigen::Vector3f &current_points_centroid,
 	    const MotionModel& motion_model,
       const double xy_sensor_resolution,
@@ -49,6 +47,21 @@ public:
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
 private:
+  // Compute the joint probability of each cell and the region, given
+  // the prior region probability.
+	void recomputeProbs(
+      const double prior_region_prob,
+      ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const;
+
+  // Sample more finely in all regions above a certain threshold probability.
+  void makeNewTransforms3D(
+      const double new_xy_resolution, const double new_z_resolution,
+      const double old_xy_sampling_resolution,
+      const double old_z_sampling_resolution,
+      ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
+      std::vector<XYZTransform>* new_xyz_transforms,
+      double* total_recomputing_prob) const;
+
   // Create a list of candidate xyz transforms.
   void createCandidateXYZTransforms(
       const double xy_sampling_resolution,
@@ -57,21 +70,6 @@ private:
       const std::pair <double, double>& yRange,
       const std::pair <double, double>& zRange_orig,
       std::vector<XYZTransform>* transforms) const;
-
-	void recomputeProbs(
-	    const double prior_prob,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const;
-
-  void makeNewTransforms3D(
-      const double new_xy_resolution, const double new_z_resolution,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
-      std::vector<XYZTransform>* new_xyz_transforms,
-      double* total_recomputing_prob) const;
-
-  //LFDiscrete3d& lf_discrete_3d_;
-  //LF_RGBD_6D lf_rgbd_6d_;
-  //DensityGridTracker density_grid_tracker_;
-  const FastFunctions& fast_functions_;
 };
 
 #endif /* ADH_TRACKER_3D_H_ */
