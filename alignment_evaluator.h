@@ -1,6 +1,9 @@
 /*
 *  Created on: Aug 18, 2014
 *      Author: davheld
+*
+* Base class for evaluating the probability of different alignments between
+* points in the previous and the current frames.
 */
 
 #ifndef ALIGNMENT_EVALUATOR_H
@@ -38,7 +41,8 @@ protected:
   virtual void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
             const double xy_sensor_resolution,
-            const double z_sensor_resolution);
+            const double z_sensor_resolution,
+            const size_t num_current_points);
 
   // Get the likelihood field score of the transform (x,y,z) applied to the
   // current points.
@@ -59,15 +63,22 @@ protected:
   double sigma_xy_;
   double sigma_z_;
 
+  // Convert the variance to a factor such that
+  // exp(-x^2 / 2 sigma^2) = exp(x^2 * exp_factor)
+  // where x is the distance.
   double xy_exp_factor_;
   double z_exp_factor_;
   double xyz_exp_factor_;
+
+  // Whether the variance is the same in the xy and z directions.
   bool isotropic_;
 
   // Smoothing factor for the measurement model, so we never assign a point
   // a 0 probability.
   double smoothing_factor_;
 
+  // How much to discount the measurement model, based on dependencies
+  // between points.
   double measurement_discount_factor_;
 };
 

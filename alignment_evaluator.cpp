@@ -3,7 +3,6 @@
 *      Author: davheld
 */
 
-
 #include "alignment_evaluator.h"
 
 namespace {
@@ -33,11 +32,14 @@ const double kSmoothingFactor = 0.8;
 // dependencies between neighboring points).
 const double kMeasurementDiscountFactor = 1;
 
+// We assume that there are this many independent points per object.  Beyond
+// this many, we discount the measurement model accordingly.
+const double kMaxDiscountPoints = 150.0;
+
 } // namespace
 
 AlignmentEvaluator::AlignmentEvaluator()
-  : smoothing_factor_(kSmoothingFactor),
-    measurement_discount_factor_(kMeasurementDiscountFactor)
+  : smoothing_factor_(kSmoothingFactor)
 {
 }
 
@@ -54,7 +56,17 @@ void AlignmentEvaluator::init(
     const double xy_sampling_resolution,
     const double z_sampling_resolution,
     const double xy_sensor_resolution,
-    const double z_sensor_resolution) {
+    const double z_sensor_resolution,
+    const size_t num_current_points) {
+  // Downweight all points in the current frame beyond kMaxDiscountPoints
+  // because they are not all independent.
+  if (num_current_points < kMaxDiscountPoints) {
+      measurement_discount_factor_ = kMeasurementDiscountFactor;
+  } else {
+      measurement_discount_factor_ = kMeasurementDiscountFactor *
+          (kMaxDiscountPoints / num_current_points);
+  }
+
   xy_sampling_resolution_ = xy_sampling_resolution;
   z_sampling_resolution_ = z_sampling_resolution;
 
@@ -78,11 +90,13 @@ void AlignmentEvaluator::init(
                             pow(noise_error_z, 2));
 
   // Convert the variance to a factor such that
-  // exp(-x^2 / 2 sigma^2) = exp(x^2 * factor)
+  // exp(-x^2 / 2 sigma^2) = exp(x^2 * exp_factor)
   // where x is the distance.
   xy_exp_factor_ = -1.0 / (2 * pow(sigma_xy_, 2));
   z_exp_factor_ = -1.0 / (2 * pow(sigma_z_, 2));
   xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy_, 2)) + pow(sigma_z_, 2));
+
+  // Check if the variance is the same in the xy and z directions.
   isotropic_ = (xy_exp_factor_ == z_exp_factor_);
 }
 
@@ -97,8 +111,10 @@ void AlignmentEvaluator::score3DTransforms(
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
   // Initialize variables for tracking grid.
+  const size_t num_current_points = current_points->size();
   init(xy_sampling_resolution, z_sampling_resolution,
-       sensor_horizontal_resolution, sensor_vertical_resolution);
+       sensor_horizontal_resolution, sensor_vertical_resolution,
+       num_current_points);
 
   const size_t num_transforms = transforms.size();
 

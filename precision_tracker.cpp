@@ -22,11 +22,11 @@ const bool use_color = true;
 // Whether to use the density grid tracker (pre-caching) or the lf_tracker
 // (post-caching).  The LF_tracker is slightly more accurate but about
 // twice as slow.
-const bool use_lf_tracker = true;
+const bool use_lf_tracker = false;
 
 // We downsample the current frame of the tracked object to have this many
 // points.
-const int kCurrFrameDownsample = 150;
+const int kCurrFrameDownsample = 400;
 
 // We downsample the previous frame of the tracked object to have this many
 // points.

@@ -16,10 +16,6 @@
 
 namespace {
 
-// We assume that there are this many independent points per object.  Beyond
-// this many, we discount the measurement model accordingly.
-const double kMaxDiscountPoints = 150.0;
-
 // How far to spill over in the density grid (number of sigmas).
 const double kSpilloverRadius = 2.0;
 
@@ -51,10 +47,11 @@ DensityGridTracker::~DensityGridTracker() {
 void DensityGridTracker::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
-          const double sensor_vertical_resolution) {
+          const double sensor_vertical_resolution,
+          const size_t num_current_points) {
   AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
                            sensor_horizontal_resolution,
-                           sensor_vertical_resolution);
+                           sensor_vertical_resolution, num_current_points);
 
   computeDensityGridParameters(
         prev_points_, xy_sampling_resolution, z_sampling_resolution,
@@ -77,15 +74,6 @@ void DensityGridTracker::computeDensityGridParameters(
   z_grid_step_ =
       z_sampling_resolution > 0 ? z_sampling_resolution :
         xy_sampling_resolution * (z_sensor_resolution / xy_sensor_resolution);
-
-  // Downweight all points beyond kMaxDiscountPoints because they are not
-  // all independent.
-  if (prev_points->size() < kMaxDiscountPoints) {
-      discount_factor_ = measurement_discount_factor_;
-  } else {
-      discount_factor_ = measurement_discount_factor_ *
-          (kMaxDiscountPoints / prev_points->size());
-  }
 
   // Find the min and max of the previous points.
   pcl::PointXYZRGB max_pt;
@@ -313,8 +301,8 @@ double DensityGridTracker::getLogProbability(
 
   // Combine the motion model score with the (discounted) measurement score to
   // get the final log probability.
-  const double log_prob =
-      log(motion_model_prob) + discount_factor_ * log_measurement_prob;
+  const double log_prob = log(motion_model_prob) +
+      measurement_discount_factor_ * log_measurement_prob;
 
   return log_prob;
 }

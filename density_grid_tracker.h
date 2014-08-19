@@ -17,6 +17,7 @@
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+
 #include "scored_transform.h"
 #include "alignment_evaluator.h"
 
@@ -34,7 +35,8 @@ private:
   void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
             const double sensor_horizontal_resolution,
-            const double sensor_vertical_resolution);
+            const double sensor_vertical_resolution,
+            const size_t num_current_points);
 
   double getLogProbability(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
@@ -71,10 +73,6 @@ private:
   int xSize_;
   int ySize_;
   int zSize_;
-
-  // How much to discount the measurement model, based on dependencies
-  // between points.
-  double discount_factor_;
 
   // The step size of the density grid.
   double xy_grid_step_;

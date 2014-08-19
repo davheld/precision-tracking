@@ -84,7 +84,8 @@ private:
   void init(const double xy_sampling_resolution,
             const double z_sampling_resolution,
             const double sensor_horizontal_resolution,
-            const double sensor_vertical_resolution);
+            const double sensor_vertical_resolution,
+            const size_t num_current_points);
 
   double get_log_prob(const pcl::PointXYZRGB& current_pt);
 

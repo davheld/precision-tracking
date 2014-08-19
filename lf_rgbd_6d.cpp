@@ -99,10 +99,12 @@ void LF_RGBD_6D::setPrevPoints(
 void LF_RGBD_6D::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
-          const double sensor_vertical_resolution) {
+          const double sensor_vertical_resolution,
+          const size_t num_current_points) {
   AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
                            sensor_horizontal_resolution,
-                           sensor_vertical_resolution);
+                           sensor_vertical_resolution,
+                           num_current_points);
 
   // Compute the total particle sampling resolution
   const double sampling_resolution = sqrt(pow(xy_sampling_resolution_, 2) +
@@ -130,8 +132,10 @@ void LF_RGBD_6D::score6DTransforms(
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransform6D>* scored_transforms) {
   // Initialize variables for tracking grid.
+  const size_t num_current_points = current_points->size();
   init(xy_sampling_resolution, z_sampling_resolution,
-       sensor_horizontal_resolution, sensor_vertical_resolution);
+       sensor_horizontal_resolution, sensor_vertical_resolution,
+       num_current_points);
 
   const size_t num_transforms = transforms.size();
 
