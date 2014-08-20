@@ -258,14 +258,14 @@ double DensityGridTracker::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& ,
     const MotionModel& motion_model,
-    const double x, const double y, const double z) {
+    const double delta_x, const double delta_y, const double delta_z) {
   // Amount of total log probability density for the given alignment.
   double total_log_density = 0;
 
   // Offset to apply to each point to get the new position.
-  const double x_offset = (x - min_pt_.x) / xy_grid_step_;
-  const double y_offset = (y - min_pt_.y) / xy_grid_step_;
-  const double z_offset = (z - min_pt_.z) / z_grid_step_;
+  const double x_offset = (delta_x - min_pt_.x) / xy_grid_step_;
+  const double y_offset = (delta_y - min_pt_.y) / xy_grid_step_;
+  const double z_offset = (delta_z - min_pt_.z) / z_grid_step_;
 
   // Iterate over every point and look up its log probability density
   // in the density grid.
@@ -294,7 +294,8 @@ double DensityGridTracker::getLogProbability(
   }
 
   // Compute the motion model probability.
-  const double motion_model_prob = motion_model.computeScore(x, y, z);
+  const double motion_model_prob = motion_model.computeScore(
+              delta_x, delta_y, delta_z);
 
   // Compute the log measurement probability.
   const double log_measurement_prob = total_log_density;

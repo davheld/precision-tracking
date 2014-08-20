@@ -38,11 +38,12 @@ private:
             const double sensor_vertical_resolution,
             const size_t num_current_points);
 
+  // Get the probability of this transform.
   double getLogProbability(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const Eigen::Vector3f& current_points_centroid,
       const MotionModel& motion_model,
-      const double x, const double y, const double z);
+      const double delta_x, const double delta_y, const double delta_z);
 
   void computeDensityGridParameters(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
@@ -54,17 +55,6 @@ private:
   // Pre-cache probability values in a density grid for fast lookups.
   void computeDensityGrid(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points);
-
-  // Get the score of this transform, using the density grid.
-  double getLogProbability(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const pcl::PointXYZRGB& min_pt_,
-      const double xy_gridStep,
-      const double z_gridStep,
-      const MotionModel& motion_model,
-      const double x,
-      const double y,
-      const double z) const;
 
   // A grid used to pre-cache probability values for fast lookups.
   std::vector<std::vector<std::vector<double> >  > density_grid_;

@@ -92,7 +92,7 @@ void LF_RGBD_6D::setPrevPoints(
   // lookups.
   searchTree_.setInputCloud(prev_points_);
 
-  // Set search tree epsilonfor a speedup.
+  // Set search tree epsilon for a speedup.
   searchTree_.setEpsilon(kSearchTreeEpsilon);
 }
 
@@ -145,9 +145,9 @@ void LF_RGBD_6D::score6DTransforms(
 
   for(size_t i = 0; i < num_transforms; ++i){
     const Transform6D& transform = transforms[i];
-    const double x = transform.x;
-    const double y = transform.y;
-    const double z = transform.z;
+    const double delta_x = transform.x;
+    const double delta_y = transform.y;
+    const double delta_z = transform.z;
     const double roll = transform.roll;
     const double pitch = transform.pitch;
     const double yaw = transform.yaw;
@@ -155,11 +155,11 @@ void LF_RGBD_6D::score6DTransforms(
 
     const double log_prob = getLogProbability(
           current_points, current_points_centroid, motion_model,
-          x, y, z, roll, pitch, yaw);
+          delta_x, delta_y, delta_z, roll, pitch, yaw);
 
     // Save the complete transform with its log probability.
-    const ScoredTransform6D scored_transform(x, y, z, roll, pitch, yaw,
-        log_prob, volume);
+    const ScoredTransform6D scored_transform(
+                delta_x, delta_y, delta_z, roll, pitch, yaw, log_prob, volume);
     scored_transforms->set(scored_transform, i);
   }
 }
@@ -269,19 +269,11 @@ double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
   searchTree_.nearestKSearch(current_pt, max_nn_, nn_indices_, nn_sq_dists_);
   const pcl::PointXYZRGB& prev_pt = (*prev_points_)[nn_indices_[0]];
 
-    // Compute the log probability of this neighbor match.
-  double log_point_match_prob_i;
-  //if (isotropic_) {
-    log_point_match_prob_i = nn_sq_dists_[0] * xy_exp_factor_;
-  /*} else {
-    // Compute the distance to the neighbor in each direction.
-    const double distance_xy_sq =
-        pow(prev_pt.x - current_pt.x, 2) + pow(prev_pt.y - current_pt.y, 2);
-    const double distance_z_sq = pow(prev_pt.z - current_pt.z, 2);
-
-    log_point_match_prob_i = distance_xy_sq * xy_exp_factor_ +
-        distance_z_sq * z_exp_factor_;
-  }*/
+  // Compute the log probability of this neighbor match.
+  // The NN search is isotropic, but our measurement model is not!
+  // To acccount for this, we weight the NN search only by the isotropic
+  // xyz_exp_factor_.
+  const double log_point_match_prob_i = nn_sq_dists_[0] * xyz_exp_factor_;
 
   // Compute the probability of this neighbor match.
   const double point_match_prob_spatial_i = exp(log_point_match_prob_i);
@@ -289,7 +281,8 @@ double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
   // Compute the point match probability, incorporating color if necessary.
   double point_prob;
   if (kUseColor) {
-    point_prob = computeColorProb(prev_pt, current_pt, point_match_prob_spatial_i);
+    point_prob = computeColorProb(prev_pt, current_pt,
+                                  point_match_prob_spatial_i);
   } else {
     point_prob = point_match_prob_spatial_i + smoothing_factor_;
   }

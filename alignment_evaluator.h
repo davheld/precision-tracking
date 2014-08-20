@@ -44,13 +44,13 @@ protected:
             const double z_sensor_resolution,
             const size_t num_current_points);
 
-  // Get the likelihood field score of the transform (x,y,z) applied to the
+  // Get the probability of the translation (x, y, z) applied to the
   // current points.
   virtual double getLogProbability(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const Eigen::Vector3f& current_points_centroid,
       const MotionModel& motion_model,
-      const double x, const double y, const double z) = 0;
+      const double delta_x, const double delta_y, const double delta_z) = 0;
 
   // Previous points for alignment.
   pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points_;

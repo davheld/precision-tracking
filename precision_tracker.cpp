@@ -26,7 +26,7 @@ const bool use_lf_tracker = false;
 
 // We downsample the current frame of the tracked object to have this many
 // points.
-const int kCurrFrameDownsample = 400;
+const int kCurrFrameDownsample = 150;
 
 // We downsample the previous frame of the tracked object to have this many
 // points.
@@ -106,9 +106,9 @@ PrecisionTracker::PrecisionTracker()
 {
   if (use_color) {
     alignment_evaluator_.reset(new LF_RGBD_6D);
-  } /*else if (use_lf_tracker) {
+  } else if (use_lf_tracker) {
     alignment_evaluator_.reset(new LFDiscrete3d);
-  } */ else {
+  } else {
     alignment_evaluator_.reset(new DensityGridTracker);
   }
 }
@@ -148,9 +148,6 @@ void PrecisionTracker::track(
 
   // The vertical resolution for the Velodyne is 2.2 * the horizontal resolution.
   const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
-
-  //boost::shared_ptr<AlignmentEvaluator> alignment_evaluator(new LF_RGBD_6D);
-  //boost::shared_ptr<AlignmentEvaluator> alignment_evaluator(new DensityGridTracker);
 
   adh_tracker3d_.track(
         initial_xy_sampling_resolution, initial_z_sampling_resolution,
