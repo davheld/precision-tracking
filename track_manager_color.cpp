@@ -5,13 +5,6 @@
 
 #include <vector>
 
-//#include "helper.h"
-
-namespace{
-  //const char* logger = ROSCONSOLE_DEFAULT_NAME ".track_viewer";
-}
-
-//using namespace sensor_msgs;
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
@@ -26,15 +19,6 @@ TrackManagerColor::TrackManagerColor() :
   tracks_(vector< boost::shared_ptr<Track> >())
 {
 }
-
-/*TrackManager::TrackManager(std::istream& istrm)  :
-  serialization_version_(TRACKMANAGER_SERIALIZATION_VERSION),
-  tracks_(vector< shared_ptr<Track> >())
-{
-  bool success = deserialize(istrm);
-  if(!success)
-    throw 1;
-}*/
 
 TrackManagerColor::TrackManagerColor(const std::vector< boost::shared_ptr<Track> >& tracks)  :
   serialization_version_(TRACKMANAGER_SERIALIZATION_VERSION),
@@ -294,15 +278,6 @@ void Track::serialize(ostream& out) const {
   out << "Track" << endl;
   out << "serialization_version_" << endl;
   out << TRACK_SERIALIZATION_VERSION << endl;
-  /*out << "label_" << endl;
-  out << label_ << endl;
-  out << "velodyne_offset_" << endl;
-  for(int i = 0; i < 4; ++i) {
-    for(int j = 0; j < 4; ++j) { 
-      out.write((char*)&velodyne_offset_[i][j], sizeof(double));
-    }
-  }
-  out << endl;*/
   
   out << "num_frames_" << endl;
   out << frames_.size() << endl;
@@ -338,27 +313,9 @@ bool Track::deserialize(istream& istrm) {
   }
   getline(istrm, line);
 
-if (!checkLine(istrm, "track_num_")) return false;
-
-  /*getline(istrm, line);
-  if(line.compare("track_num_") != 0)
-    return false;*/
+  if (!checkLine(istrm, "track_num_")) return false;
   istrm >> track_num_;
   getline(istrm, line);
-  //printf("Track num: %d\n", track_num_);
-
-  /*getline(istrm, line);
-  if(line.compare("label_") != 0)
-    return false;
-  getline(istrm, label_);
-
-  getline(istrm, line);
-  if(line.compare("velodyne_offset_") != 0)
-    return false;
-  for(int i = 0; i < 4; ++i)
-    for(int j = 0; j < 4; ++j)
-      istrm.read((char*) &velodyne_offset_[i][j], sizeof(double));
-  getline(istrm, line);*/
     
   getline(istrm, line);
   if(line.compare("num_frames_") != 0)
@@ -366,12 +323,10 @@ if (!checkLine(istrm, "track_num_")) return false;
   size_t num_frames = 0;
   istrm >> num_frames;
   getline(istrm, line);
-  //printf("num_frames: %zu\n", num_frames);
   
   frames_.resize(num_frames);
   for(size_t i=0; i<num_frames; ++i) {
     assert(!frames_[i]);
-    //printf("Deserializing frame: %zu\n", i);
     frames_[i] = boost::shared_ptr<Frame>(new Frame(istrm));
   }
   
@@ -387,8 +342,7 @@ bool Track::seek(double timestamp, double max_time_difference, size_t* idx) {
   double min_delta = FLT_MAX;
   size_t best_idx = 0;
   for(size_t i = 0; i < frames_.size(); ++i) {
-    //double delta = fabs(frames_[i]->timestamp_ - timestamp);
-    double delta = fabs(frames_[i]->estimateAdjustedTimestamp() - timestamp);
+    double delta = fabs(frames_[i]->timestamp_ - timestamp);
     if(delta < min_delta) { 
       min_delta = delta;
       best_idx = i;
@@ -453,18 +407,6 @@ Track::Track() :
 {
 }
 
-/*Track::Track(istream& istrm) :
-  serialization_version_(TRACK_SERIALIZATION_VERSION),
-  label_("unlabeled")
-{
-  long begin = istrm.tellg();
-  istrm.seekg(begin);
-
-  bool success = deserialize(istrm);
-  if(!success)
-    throw 1;
-}*/
-
 void Track::reserve(size_t num) {
   frames_.reserve(num);
 }
@@ -524,25 +466,18 @@ Frame::Frame(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
 }
 
 Frame::Frame(istream& istrm) :
-  serialization_version_(FRAME_SERIALIZATION_VERSION),
-  spin_offset_(-1)
+  serialization_version_(FRAME_SERIALIZATION_VERSION)
 {
-  //printf("Frame deserialization constructor\n");
   deserialize(istrm);
-  //assert(deserialize(istrm));
-  //assert(!centroid_);
 }
 
 bool Frame::deserialize(std::istream& istrm) {
-  //printf("Deserializing frame\n");
-
   string line;
   getline(istrm, line);
   if(line.compare("Frame") != 0) {
     cout << "Expected 'Frame', got " << line << endl;
     return false;
   }
-  //printf("Read 'frame'\n");
   
   getline(istrm, line);
   if(line.compare("serialization_version_") != 0) {
@@ -555,7 +490,6 @@ bool Frame::deserialize(std::istream& istrm) {
     return false;
   }
   getline(istrm, line);
-  //printf("Got frame serialization version: %d\n", serialization_version_);
 
   getline(istrm, line);
   if(line.compare("timestamp_") != 0) {
@@ -564,7 +498,6 @@ bool Frame::deserialize(std::istream& istrm) {
   }
   istrm.read((char*)&timestamp_, sizeof(double));
   getline(istrm, line);
-  //printf("Got timestamp: %lf\n", timestamp_);
 
   pcl::PointCloud<pcl::PointXYZRGB> cloud;
   deserializePointCloud(istrm, cloud);
@@ -572,34 +505,6 @@ bool Frame::deserialize(std::istream& istrm) {
   cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(
       new pcl::PointCloud<pcl::PointXYZRGB>);
   *cloud_ = cloud;
-
-  /*getline(istrm, line);
-  if(line.compare("robot_pose_") != 0) {
-    cout << "Expected 'robot_pose_', got " << line << endl;
-    return false;
-  }
-  istrm.read((char*)&robot_pose_.x, sizeof(double));
-  istrm.read((char*)&robot_pose_.y, sizeof(double));
-  istrm.read((char*)&robot_pose_.z, sizeof(double));
-  istrm.read((char*)&robot_pose_.roll, sizeof(double));
-  istrm.read((char*)&robot_pose_.pitch, sizeof(double));
-  istrm.read((char*)&robot_pose_.yaw, sizeof(double));
-  getline(istrm, line);*/
-
-  //cloud_ = boost::shared_ptr<pcl::PointCloud>(new pcl::PointCloud());
-  /*cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(new pcl::PointCloud<pcl::PointXYZRGB>);
-  cloud_->header.stamp = 0; //ros::Time(1); //Avoid a warning about timestamps from ROS.  We aren't using them anyway.
-  cloud_->header.frame_id = "Frame_id";
-  bool success = true;*/
-  //cloud_->header.line = "Header"; //set a default header to avoid warnings
-  //bool success = deserializePointCloudROS(istrm, cloud_.get());
-
-  //printf("smooth_points_matrix_: rows: %d, cols: %d\n", smooth_points_matrix_.rows(), smooth_points_matrix_.cols());
-
-  //printf("Converting smooth cloud to matrix format\n");
-  //smoothCloudToMatrix();
-
-  //printf("smooth_points_matrix_: rows: %d, cols: %d\n", smooth_points_matrix_.rows(), smooth_points_matrix_.cols());
 
   return true;
 }
@@ -613,195 +518,56 @@ void Frame::serialize(std::ostream& out) const{
   out << "timestamp_" << endl;
   out.write((char*) &timestamp_, sizeof(double));
   out << endl;
-  /*out << "robot_pose_" << endl;
-  out.write((char*) &robot_pose_.x, sizeof(double));
-  out.write((char*) &robot_pose_.y, sizeof(double));
-  out.write((char*) &robot_pose_.z, sizeof(double));
-  out.write((char*) &robot_pose_.roll, sizeof(double));
-  out.write((char*) &robot_pose_.pitch, sizeof(double));
-  out.write((char*) &robot_pose_.yaw, sizeof(double));
-  out << endl;*/
-  //serializePointCloud(*cloud_, out);
   out << endl;
 }
-//     out << "timestamp" << endl;
-//     out.write((char*)&timestamps_[i], sizeof(double));
-//     out << endl;
-//     assert(velodyne_centers_[i].size() == 3);
-//     out << "velo_center" << endl;
-//     out.write((char*)&velodyne_centers_[i][0], sizeof(float));
-//     out.write((char*)&velodyne_centers_[i][1], sizeof(float));
-//     out.write((char*)&velodyne_centers_[i][2], sizeof(float));
-//     out << endl;
-//     serializePointCloudROS(*clouds_[i], out);
-//     out << endl;
-  
 
-bool Frame::smoothCloudToMatrix() const{
-  if(cloud_->points.size() < 1){
-  	printf("Cloud has no points - not creating smooth_points_matrix_\n");
-    return false;
-  }
-    
-  smooth_points_matrix_ = MatrixXd(cloud_->points.size(), 4);
-  for(size_t i = 0; i < cloud_->points.size(); ++i) {
-  	smooth_points_matrix_.coeffRef(i, 0) = cloud_->points[i].x;
-  	smooth_points_matrix_.coeffRef(i, 1) = cloud_->points[i].y;
-  	smooth_points_matrix_.coeffRef(i, 2) = cloud_->points[i].z;
-  	smooth_points_matrix_.coeffRef(i, 3) = 1;
-  }
-
-  printf("Created smooth_points_matrix_\n");
-
-  return true;
-}
-
-bool Frame::getCloudInVeloCoords(Eigen::MatrixXd* velo_points) const {
-  if(cloud_->points.size() < 1)
-    return false;
-
-  if (smooth_points_matrix_.rows() == 0 && smooth_points_matrix_.cols() == 0) {
-  	smoothCloudToMatrix();
-  }
-
-  printf("smooth_points_matrix_: Rows: %ld, cols: %ld\n",
-      smooth_points_matrix_.rows(), smooth_points_matrix_.cols());
-
-  *velo_points = smooth_points_matrix_ * smooth_to_velo_.cast<double>();
-  return true;
-}
-
-/*dgc_pose_t findRobotPose(const double& targetTimeStamp, const dgc::dgc_velodyne_spin& spin){
-  double bestDelta = 99999;
-  int bestSpin = -1;
-
-  for(int i = 0; i < spin.num_scans; i++) {
-    printf("Spin: %d, timestamp: %lf\n", i, spin.scans[i].pose[0].timestamp);
-    double delta = fabs(spin.scans[i].pose[0].timestamp - targetTimeStamp);
-    if (delta < bestDelta){
-      bestDelta = delta;
-      bestSpin = i;
-    }
-  }
-
-  printf("Best delta: %lf\n", bestDelta);
-
-  return spin.scans[bestSpin].robot;
-
-}*/
-
-void Frame::getVelodyneXYZ(double* x, double* y, double* z) const {
-  // -- Get the velodyne center.
-  *x = 0;
-  *y = 0;
-  *z = 0;
-}
-
-  Vector3f Frame::getCentroid() {
-    if(centroid_)
-      return *centroid_;
-
-    centroid_ = boost::shared_ptr<Vector3f>(new Vector3f());
-    *centroid_ = Vector3f::Zero();
-    for(size_t i = 0; i < cloud_->points.size(); ++i) {
-      centroid_->coeffRef(0) += cloud_->points[i].x;
-      centroid_->coeffRef(1) += cloud_->points[i].y;
-      centroid_->coeffRef(2) += cloud_->points[i].z;
-    }
-    *centroid_ /= (double)cloud_->points.size();
-
+Vector3f Frame::getCentroid() {
+  if(centroid_)
     return *centroid_;
+
+  centroid_ = boost::shared_ptr<Vector3f>(new Vector3f());
+  *centroid_ = Vector3f::Zero();
+  for(size_t i = 0; i < cloud_->points.size(); ++i) {
+    centroid_->coeffRef(0) += cloud_->points[i].x;
+    centroid_->coeffRef(1) += cloud_->points[i].y;
+    centroid_->coeffRef(2) += cloud_->points[i].z;
   }
+  *centroid_ /= (double)cloud_->points.size();
 
-  Eigen::MatrixXf Frame::getBoundingBoxVelo() {
-    MatrixXf boundingBoxSmooth = getBoundingBox();
+  return *centroid_;
+}
 
-    MatrixXf boundingBoxVelo = boundingBoxSmooth * smooth_to_velo_;//.cast<double>();
-
-    return boundingBoxVelo;
-  }
-      
-
-  MatrixXf Frame::getBoundingBox() {
-    if(bounding_box_)
-      return *bounding_box_;
-
-    bounding_box_ = boost::shared_ptr<MatrixXf>(new MatrixXf(2, 2));
-    MatrixXf& bb = *bounding_box_;
-    bb(0, 0) = FLT_MAX; // Small x.
-    bb(1, 0) = FLT_MAX; // Small y.
-    bb(0, 1) = -FLT_MAX; // Big x.
-    bb(1, 1) = -FLT_MAX; // Big y.
-    for(size_t i = 0; i < cloud_->points.size(); ++i) {
-      double x = cloud_->points[i].x;
-      double y = cloud_->points[i].y;
-      if(x < bb(0, 0))
-	bb(0, 0) = x;
-      if(x > bb(0, 1))
-	bb(0, 1) = x;
-      if(y < bb(1, 0))
-	bb(1, 0) = y;
-      if(y > bb(1, 1))
-	bb(1, 1) = y;
-    }
-
+MatrixXf Frame::getBoundingBox() {
+  if(bounding_box_)
     return *bounding_box_;
+
+  bounding_box_ = boost::shared_ptr<MatrixXf>(new MatrixXf(2, 2));
+  MatrixXf& bb = *bounding_box_;
+  bb(0, 0) = FLT_MAX; // Small x.
+  bb(1, 0) = FLT_MAX; // Small y.
+  bb(0, 1) = -FLT_MAX; // Big x.
+  bb(1, 1) = -FLT_MAX; // Big y.
+  for(size_t i = 0; i < cloud_->points.size(); ++i) {
+    double x = cloud_->points[i].x;
+    double y = cloud_->points[i].y;
+    if(x < bb(0, 0))
+      bb(0, 0) = x;
+    if(x > bb(0, 1))
+      bb(0, 1) = x;
+    if(y < bb(1, 0))
+      bb(1, 0) = y;
+    if(y > bb(1, 1))
+      bb(1, 1) = y;
   }
 
-  double Frame::getDistance() {
-    Vector3f centroid = getCentroid();
-    return (centroid.cast<double>()).norm();
-  }
+  return *bounding_box_;
+}
 
-  double Frame::estimateSpinOffset() {
-    if(spin_offset_ != -1) {
-    	printf("Spin offset already computed:");
-    	printf("Spin offset: %lf", spin_offset_);
-      return spin_offset_;
-    }
+double Frame::getDistance() {
+  Vector3f centroid = getCentroid();
+  return (centroid.cast<double>()).norm();
+}
 
-    if(cloud_->points.size() == 0) {
-    	printf("Error - empty point cloud.  No spin offset.");
-      return 0;
-    }
-
-    //printf("Estimating spin offset from points\n");
-    MatrixXd cloud;
-    bool valid = getCloudInVeloCoords(&cloud);
-
-    // Compute the centroid.
-    VectorXd mean = cloud.colwise().sum() / (double)cloud.rows();
-
-    double x = mean(0);
-    double y = mean(1);
-    double angle = atan2(-y, -x);
-    if(angle < 0)
-      angle += 2.0 * M_PI;
-    if(!(angle >= 0.0 && angle <= 2.0 * M_PI)) {
-      cout << "npts: " << cloud.rows() << endl;
-      cout << "valid: " << valid << endl;
-      cout << cloud << endl;
-      cout << "--- " << endl;
-      cout << smooth_to_velo_ << endl;
-      cout << "--- " << endl;
-      cout << cloud_ << endl;
-      cout << "angle: " << angle << endl;
-      cout << "x: " << x << ", y: " << y << endl;
-    }
-
-    spin_offset_ = angle / (2.0 * M_PI);
-    if(!(spin_offset_ >= 0.0 && spin_offset_ <= 1.0))
-      cout << "spin_offset_: " << spin_offset_ << endl;
-    
-    return spin_offset_;
-  }
-    
-  double Frame::estimateAdjustedTimestamp() {
-    double spin_time = 0.1;
-    double offset = estimateSpinOffset();
-    double adjusted_timestamp = timestamp_ + offset * spin_time;
-    return adjusted_timestamp;
-  }
 
 /************************************************************/
 /******************** Helper Functions ********************/
@@ -1507,7 +1273,7 @@ bool cloudsEqual(const pcl::PointCloud<pcl::PointXYZRGB>& c1,
     const pcl::PointCloud<pcl::PointXYZRGB>& c2) {
 
   // -- Check the points.
-  /*if(c1.points.size() != c2.points.size()) {
+  if(c1.points.size() != c2.points.size()) {
     //cout << "Different number of points: " << c1.get_points_size() << " " << c2.get_points_size() << endl;
     return false;
   }
@@ -1521,111 +1287,8 @@ bool cloudsEqual(const pcl::PointCloud<pcl::PointXYZRGB>& c1,
     }
   }
 
-  // -- Check the channels.
-  if(c1.channels.size() != c2.channels.size()) {
-    //cout << "Different number of channels." << endl;
-    return false;
-  }
-
-  for(size_t i=0; i<c1.channels.size(); ++i) {
-    if(c1.channels[i].values.size() != c1.channels[i].values.size())
-      return false;
-    for(size_t j=0; j<c1.channels[i].values.size(); ++j) {
-      if(!floatEq(c1.channels[i].values[j], c2.channels[i].values[j]))
-	return false;
-    }
-  }*/
-
   return true;
 }
-
-
-/*bool streamTrack(std::string track_manager_filename, const Track& tr) {
-  // -- Stick the track on the end.
-  ofstream out;
-  out.open(track_manager_filename.c_str(), ios::out | ios::app | ios::binary); 
-  tr.serialize(out);
-  out.close();
-  
-  return true;
-}*/
-
-/*boost::shared_ptr<PointCloud> getRandomCloud() {
-  int num_pts = 100;
-
-  boost::shared_ptr<PointCloud> cloud(new PointCloud());
-  cloud->points.resize(num_pts);
-  cloud->channels.resize(1);
-  cloud->channels[0].values.resize(num_pts);
-  double mean_x = rand() % 1000;
-  double mean_y = rand() % 1000;
-  double mean_z = rand() % 1000;
-  for(size_t i = 0; i < cloud->points.size(); ++i) {
-    cloud->points[i].x = mean_x + (double)(rand() % 1000) / 1000.0;
-    cloud->points[i].y = mean_y + (double)(rand() % 1000) / 1000.0;
-    cloud->points[i].z = mean_z + (double)(rand() % 1000) / 1000.0;
-    cloud->channels[0].values[i] = rand() % 256;
-  }
-
-  return cloud;
-}
-
-void getRandomTransform(dgc_transform_t trans) {
-  dgc_transform_identity(trans);
-  dgc_transform_translate(trans, rand()%1000, rand()%1000, rand()%1000);
-}
-  
-boost::shared_ptr<Frame> getRandomFrame(dgc_transform_t velodyne_offset) {
-  boost::shared_ptr<PointCloud> cloud = getRandomCloud();
-  double timestamp = (double)(rand() % 1000000) / (double)1e3;
-
-  dgc_pose_t robot_pose;
-  robot_pose.x = rand() % 1000;
-  robot_pose.y = rand() % 1000;
-  robot_pose.z = rand() % 1000;
-  robot_pose.roll = (double)(rand() % 2 * M_PI * 1e6) / (double)1e6;
-  robot_pose.pitch = (double)(rand() % 2 * M_PI * 1e6) / (double)1e6;
-  robot_pose.yaw = (double)(rand() % 2 * M_PI * 1e6) / (double)1e6;
-
-  return boost::shared_ptr<Frame>(new Frame(cloud, timestamp, robot_pose, velodyne_offset));
-}
-
-boost::shared_ptr<Track> getRandomTrack() {
-  int num_frames = 10;
-
-  int cl = rand() % 3;
-  string label;
-  switch(cl) {
-  case 0:
-    label = "bicyclist";
-    break;
-  case 1:
-    label = "pedestrian";
-    break;
-  case 2:
-    label = "car";
-    break;
-  }
-
-  dgc_transform_t velodyne_offset;
-  getRandomTransform(velodyne_offset);
-
-  vector< boost::shared_ptr<Frame> > frames(num_frames);
-  for(size_t i = 0; i < frames.size(); ++i)
-    frames[i] = getRandomFrame(velodyne_offset);
-
-  return boost::shared_ptr<Track>(new Track(label, velodyne_offset, frames));
-}
-
-boost::shared_ptr<TrackManagerColor> getRandomTrackManager() {
-  int num_tracks = 15;
-
-  vector< boost::shared_ptr<Track> > tracks(num_tracks);
-  for(size_t i = 0; i < tracks.size(); ++i)
-    tracks[i] = getRandomTrack();
-
-  return boost::shared_ptr<TrackManagerColor>(new TrackManagerColor(tracks));
-}*/
 
 // See http://www.cygnus-software.com/papers/comparingfloats/comparingfloats.htm.
 bool floatEq(float x, float y, int maxUlps)

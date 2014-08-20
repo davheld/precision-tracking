@@ -94,11 +94,7 @@ void AlignmentEvaluator::init(
   // where x is the distance.
   xy_exp_factor_ = -1.0 / (2 * pow(sigma_xy_, 2));
   z_exp_factor_ = -1.0 / (2 * pow(sigma_z_, 2));
-
   xyz_exp_factor_ = -1.0 / (2 * (pow(sigma_xy_, 2)) + pow(sigma_z_, 2));
-
-  // Check if the variance is the same in the xy and z directions.
-  isotropic_ = (xy_exp_factor_ == z_exp_factor_);
 }
 
 void AlignmentEvaluator::score3DTransforms(

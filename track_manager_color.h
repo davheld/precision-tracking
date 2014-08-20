@@ -8,14 +8,8 @@
 #include <float.h>
 #include <Eigen/Eigen>
 
-//#include <sensor_msgs/PointCloud.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
-
-//#include <global.h>
-//#include <transform.h>
-//#include "velo_support.h"
-
 
 #define POINTCLOUD_SERIALIZATION_VERSION 0
 #define TRACK_SERIALIZATION_VERSION 2
@@ -27,51 +21,33 @@ namespace track_manager_color {
   class Frame {
   public:
     int serialization_version_;
+
+    // Points for the object observed in a single frame.
     //! Assumed to be stored in local coordinates!
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_;
 
-    //boost::shared_ptr<sensor_msgs::PointCloud> cloud_;
-
-    mutable Eigen::MatrixXd smooth_points_matrix_;
-
-    //! dgc format timestamp.
+    // Time that this cloud was observed.
     double timestamp_;
-    //! x, y, z, roll, pitch, yaw.
-    //dgc_pose_t robot_pose_;
-    //! smooth_frame_point^T * smooth_to_velo_ = velo_frame_point.
-    Eigen::Matrix4f smooth_to_velo_;
 
     Frame(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double timestamp);
     Frame(std::istream& istrm);
     void serialize(std::ostream& out) const;
     bool deserialize(std::istream& istrm);
 
-    //! Returns false if there were no points.  eig is filled with numpts rows and 4 cols (homogeneous coords).
-    bool getCloudInVeloCoords(Eigen::MatrixXd* eig) const;
+    //! Returns false if there were no points.
     bool operator!=(const Frame& fr);
     bool operator==(const Frame& fr);
     void getVelodyneXYZ(double* x, double* y, double* z) const;
     Eigen::Vector3f getCentroid();
     Eigen::MatrixXf getBoundingBox();
-    Eigen::MatrixXf getBoundingBoxVelo();
     double getDistance();
-    // Estimate the Velodyne time at which the frame's centroid was observed.
-    double estimateAdjustedTimestamp();
-    //! Returns a number between 0 and 1 estimating how far into the spin this frame was observed,
-    // based on the frame's centroid.
-    double estimateSpinOffset();
 
   private:
-    //convert smooth cloud to matrix format
-    bool smoothCloudToMatrix() const;
-
     //! For caching of getCentroid() call.
     boost::shared_ptr<Eigen::Vector3f> centroid_;
     //! For caching of getBoundingBox() call.
     //! bounding_box_.col(0) are the small x and y coords; .col(1) are the large.
     boost::shared_ptr<Eigen::MatrixXf> bounding_box_;
-    //! For caching of estimateSpinOffset().
-    double spin_offset_;
   };
  
   class Track {
@@ -141,21 +117,10 @@ namespace track_manager_color {
       pcl::PointCloud<pcl::PointXYZRGB>& point_cloud);
   void serializePointCloud(
       const pcl::PointCloud<pcl::PointXYZRGB> point_cloud, std::ostream& out);
-  //void serializePointCloud(const sensor_msgs::PointCloud& cloud, std::ostream& out);
-  //bool deserializePointCloud(std::istream& istrm, sensor_msgs::PointCloud* cloud);
   bool cloudsEqual(const pcl::PointCloud<pcl::PointXYZRGB>& c1,
       const pcl::PointCloud<pcl::PointXYZRGB>& c2);
   bool streamTrack(std::string track_manager_filename, const Track& tr); 
   double getTrackLength(const Track& tr);
-  //bool deserializePointCloudROS(std::istream& istrm, pcl::PointCloud<pcl::PointXYZRGB>& cloud);
-  //void serializePointCloudROS(const sensor_msgs::PointCloud& cloud, std::ostream& out);
-
-  // -- Useful functions for testing.
-  /*void getRandomTransform(dgc_transform_t trans);
-  boost::shared_ptr<sensor_msgs::PointCloud> getRandomCloud();
-  boost::shared_ptr<Frame> getRandomFrame(dgc_transform_t velodyne_offset);
-  boost::shared_ptr<Track> getRandomTrack();
-  boost::shared_ptr<TrackManagerColor> getRandomTrackManager();*/
   bool floatEq(float x, float y, int maxUlps = 5);
 }
 

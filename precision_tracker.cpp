@@ -11,18 +11,12 @@
 
 #include "down_sampler.h"
 #include "density_grid_tracker.h"
-#include "lf_discrete_3d.h"
 #include "lf_rgbd_6d.h"
 
 namespace {
 
 // Whether to include color probabilities when performing the alignment.
 const bool use_color = true;
-
-// Whether to use the density grid tracker (pre-caching) or the lf_tracker
-// (post-caching).  The LF_tracker is slightly more accurate but about
-// twice as slow.
-const bool use_lf_tracker = false;
 
 // We downsample the current frame of the tracked object to have this many
 // points.
@@ -106,8 +100,6 @@ PrecisionTracker::PrecisionTracker()
 {
   if (use_color) {
     alignment_evaluator_.reset(new LF_RGBD_6D);
-  } else if (use_lf_tracker) {
-    alignment_evaluator_.reset(new LFDiscrete3d);
   } else {
     alignment_evaluator_.reset(new DensityGridTracker);
   }

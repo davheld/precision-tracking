@@ -70,9 +70,6 @@ protected:
   double z_exp_factor_;
   double xyz_exp_factor_;
 
-  // Whether the variance is the same in the xy and z directions.
-  bool isotropic_;
-
   // Smoothing factor for the measurement model, so we never assign a point
   // a 0 probability.
   double smoothing_factor_;
