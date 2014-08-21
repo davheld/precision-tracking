@@ -8,14 +8,11 @@
 #ifndef MOVING_SYNCHRONIZER_MODEL_BUILDER_H_
 #define MOVING_SYNCHRONIZER_MODEL_BUILDER_H_
 
-#include <boost/shared_ptr.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
 #include "motion_model.h"
 #include "precision_tracker.h"
-
-class PointsInterpolater;
 
 class ModelBuilder {
 public:
@@ -32,12 +29,10 @@ public:
 
 private:
 
-  boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previousModel;
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr previousModel_;
 
-  double curr_vlf_timestamp;
-  double prev_vlf_timestamp;
-
-  double vlf_time_stamp_diff_;
+  double curr_vlf_timestamp_;
+  double prev_vlf_timestamp_;
 
   boost::shared_ptr<MotionModel> motion_model_;
 

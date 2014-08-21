@@ -31,15 +31,15 @@ namespace{
 
 const bool kUseMode = false;
 
-const bool useCentroid = false;
+const bool useCentroid = true;
 
 }  // namespace
 
 ModelBuilder::ModelBuilder(
     const bool visualize)
-    : previousModel(new pcl::PointCloud<pcl::PointXYZRGB>),
-      curr_vlf_timestamp(-1),
-      prev_vlf_timestamp(-1)
+    : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
+      curr_vlf_timestamp_(-1),
+      prev_vlf_timestamp_(-1)
 {
   motion_model_.reset(new MotionModel);
 }
@@ -50,6 +50,7 @@ ModelBuilder::~ModelBuilder() {
 
 void ModelBuilder::clear(){
   motion_model_.reset(new MotionModel);
+  previousModel_->clear();
 }
 
 void ModelBuilder::addPoints(
@@ -65,15 +66,14 @@ void ModelBuilder::addPoints(
   }
 
   //save previous vlf_timestamp
-  prev_vlf_timestamp = curr_vlf_timestamp;
-  curr_vlf_timestamp = timestamp;
+  prev_vlf_timestamp_ = curr_vlf_timestamp_;
+  curr_vlf_timestamp_ = timestamp;
 
-  if (previousModel->empty()) {
+  if (previousModel_->empty()) {
     // No previous points - just creating initial model.
     *estimated_velocity = Eigen::Vector3f::Zero();
   } else {
-    double vlf_time_stamp_diff = curr_vlf_timestamp - prev_vlf_timestamp;
-    vlf_time_stamp_diff_ = vlf_time_stamp_diff;
+    const double vlf_time_stamp_diff = curr_vlf_timestamp_ - prev_vlf_timestamp_;
 
     // Propogate the motion model forward to estimate the new position.
     motion_model_->propagate(vlf_time_stamp_diff);
@@ -85,13 +85,13 @@ void ModelBuilder::addPoints(
 
     if (useCentroid) {
 
-      Eigen::Vector3f newCentroid;
-      PrecisionTracker::computeCentroid(current_points, &newCentroid);
+      Eigen::Vector3f new_centroid;
+      PrecisionTracker::computeCentroid(current_points, &new_centroid);
 
-      Eigen::Vector3f oldCentroid;
-      PrecisionTracker::computeCentroid(previousModel, &oldCentroid);
+      Eigen::Vector3f old_centroid;
+      PrecisionTracker::computeCentroid(previousModel_, &old_centroid);
 
-      const Eigen::Vector3f& centroidDiff =  oldCentroid - newCentroid;
+      const Eigen::Vector3f& centroidDiff =  old_centroid - new_centroid;
 
       motion_model_->addCentroidDiff(centroidDiff, vlf_time_stamp_diff);
 
@@ -101,7 +101,7 @@ void ModelBuilder::addPoints(
     else {
       // Align.
       ScoredTransforms<ScoredTransformXYZ> scored_transforms;
-      precision_tracker_.track(current_points, previousModel,
+      precision_tracker_.track(current_points, previousModel_,
           horizontal_distance, *motion_model_, &scored_transforms);
 
       motion_model_->addTransformsWeightedGaussian(scored_transforms,
@@ -113,12 +113,12 @@ void ModelBuilder::addPoints(
         Eigen::Vector3f best_displacement;
         best_transform.getEigen(&best_displacement);
 
-        *estimated_velocity = best_displacement / vlf_time_stamp_diff_;
+        *estimated_velocity = best_displacement / vlf_time_stamp_diff;
       } else {
         Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
         *estimated_velocity = mean_velocity;
       }
     }
   }
-  *previousModel = *current_points;
+  *previousModel_ = *current_points;
 }

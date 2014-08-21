@@ -193,10 +193,8 @@ int main(int argc, char **argv)
 
 
     // Iterate over all frames for this track.
-    /*if ((i+1) % 10 == 0){
-      printf("Processing track %zu / %zu, tracknum %d with %zu frames\n", i+1, tracks.size(),
-            track->track_num_, frames.size());
-    }*/
+    //printf("Processing track %zu / %zu, tracknum %d with %zu frames\n", i+1, tracks.size(),
+    //      track->track_num_, frames.size());
 
     bool skip_next = false;
     double prev_angle = 0;
