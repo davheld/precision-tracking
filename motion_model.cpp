@@ -12,8 +12,6 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include "transform_helper.h"
-
 using std::endl;
 using std::vector;
 using std::max;
@@ -215,7 +213,6 @@ void MotionModel::propagate(const double& recorded_time_diff){
 	covariance_velocity_ +=
 			(covariance_propagation_uncertainty_ * (time_diff_ + min_time) / 0.1);
 	//covariance_velocity_ += covariance_propagation_uncertainty_ * time_diff / 0.1;
-	//PRINT_INFO_STREAM("After propagating, new covariance velocity: " << endl << covariance_velocity_);
 
 	mean_delta_position_ = mean_velocity_ * time_diff_;
 
@@ -223,12 +220,14 @@ void MotionModel::propagate(const double& recorded_time_diff){
 
   covariance_delta_position_ += covariance_velocity_ * pow(time_diff_,2);
   //covariance_delta_position_ /= 2;
-  covariance_delta_position_(2,2) = std::max(covariance_delta_position_(2,2), 0.1);
+  covariance_delta_position_(2,2) =
+      std::max(covariance_delta_position_(2,2), 0.1);
 
   covariance_delta_position_inv_ = covariance_delta_position_.inverse();
 
 	int k = mean_delta_position_.size();
-	pdf_constant_ = 1 / (pow(2 * pi, static_cast<double>(k)/2) * pow(covariance_delta_position_.determinant(), 0.5));
+  pdf_constant_ = 1 / (pow(2 * pi, static_cast<double>(k)/2) *
+                       pow(covariance_delta_position_.determinant(), 0.5));
 
 	//compute max score
 	TransformComponents mean_components;
@@ -239,11 +238,12 @@ void MotionModel::propagate(const double& recorded_time_diff){
 	double max_score = computeScore(mean_components);
 
 	//compute eigenvalues
-	Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(covariance_delta_position_);
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(
+        covariance_delta_position_);
 	if (eigensolver.info() != Eigen::Success){
 		min_score_ = max_score / 100;
-
-		printf("Cannot compute eigenvalues - instead chose min_score as %lf", min_score_);
+    printf("Warning - Cannot compute eigenvalues - instead chose min_score"
+           "as %lf", min_score_);
 
 	} else {
 		Eigen::Vector3d eigen_values = eigensolver.eigenvalues();
@@ -258,9 +258,12 @@ void MotionModel::propagate(const double& recorded_time_diff){
 		double sigma = 5;
 
 		TransformComponents sigma_components;
-		sigma_components.x = mean_delta_position_(0) + max_eigenvector(0) * sqrt(max_eigenvalue) * sigma;
-		sigma_components.y = mean_delta_position_(1) + max_eigenvector(1) * sqrt(max_eigenvalue) * sigma;
-		sigma_components.z = mean_delta_position_(2) + max_eigenvector(2) * sqrt(max_eigenvalue) * sigma;
+    sigma_components.x = mean_delta_position_(0) +
+        max_eigenvector(0) * sqrt(max_eigenvalue) * sigma;
+    sigma_components.y = mean_delta_position_(1) +
+        max_eigenvector(1) * sqrt(max_eigenvalue) * sigma;
+    sigma_components.z = mean_delta_position_(2) +
+        max_eigenvector(2) * sqrt(max_eigenvalue) * sigma;
 
 		double sigma_score = computeScore(sigma_components);
 

@@ -37,7 +37,8 @@ const double kMinProb = 0.0001;
 
 bool compareTransforms1(const ScoredTransformXYZ& transform_i,
     const ScoredTransformXYZ& transform_j) {
-  return transform_i.getUnnormalizedLogProb() > transform_j.getUnnormalizedLogProb();
+  return transform_i.getUnnormalizedLogProb() >
+      transform_j.getUnnormalizedLogProb();
 }
 
 } // namespace

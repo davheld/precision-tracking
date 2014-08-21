@@ -18,8 +18,6 @@
 
 #include <pcl/common/common.h>
 
-#include "transform_helper.h"
-
 using std::max;
 using std::min;
 using std::set;
@@ -31,7 +29,7 @@ using std::make_pair;
 
 namespace{
 
-const bool kUseMode = true;
+const bool kUseMode = false;
 
 const bool useCentroid = false;
 
