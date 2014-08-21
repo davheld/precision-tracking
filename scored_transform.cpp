@@ -18,3 +18,8 @@ ScoredTransformXYZ::~ScoredTransformXYZ() {
 }
 
 
+void ScoredTransformXYZ::getEigen(Eigen::Vector3f* translation) {
+  (*translation)(0) = x_;
+  (*translation)(1) = y_;
+  (*translation)(2) = z_;
+}

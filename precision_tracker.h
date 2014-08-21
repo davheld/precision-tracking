@@ -21,8 +21,8 @@ public:
   virtual ~PrecisionTracker();
 
   void track(
-      const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
-      const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previousModel,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModel,
       const double horizontal_distance,
       const MotionModel& motion_model,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
@@ -37,13 +37,13 @@ public:
 
 private:
   void track(
-      boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const double max_xy_stepSize,
       const double max_z_stepSize,
       std::pair <double, double> xRange,
       std::pair <double, double> yRange,
       std::pair <double, double> zRange,
-      const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
       const Eigen::Vector3f &current_points_centroid,
       const MotionModel& motion_model,
       const double down_sample_factor_prev,

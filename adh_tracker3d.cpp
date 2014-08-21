@@ -164,7 +164,9 @@ void ADHTracker3d::makeNewTransforms3D(
   vector<size_t> to_remove;
 
   // Compute the sampling volume of each transform.
-  const double volume = pow(xy_sampling_resolution, 2) * z_sampling_resolution;
+  const double volume = z_sampling_resolution > 0 ?
+        pow(xy_sampling_resolution, 2) * z_sampling_resolution :
+        pow(xy_sampling_resolution, 2);
 
   // Keep track of the total probability of the region that we are recomputing
   // the probability of at a higher resolution.

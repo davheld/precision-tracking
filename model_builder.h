@@ -25,7 +25,7 @@ public:
   void clear();
 
   void addPoints(
-      const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const double& vlfTimestamp,
       const Eigen::Vector3f velo_centroid,
       Eigen::Vector3f* estimated_velocity);

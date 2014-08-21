@@ -25,14 +25,13 @@ using std::min;
 using std::set;
 using std::vector;
 using std::cout;
-using namespace Eigen;
 using std::endl;
 using std::pair;
 using std::make_pair;
 
 namespace{
 
-const bool kUseMode = false;
+const bool kUseMode = true;
 
 const bool useCentroid = false;
 
@@ -56,7 +55,7 @@ void ModelBuilder::clear(){
 }
 
 void ModelBuilder::addPoints(
-    const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> >& current_points,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const double& timestamp,
     const Eigen::Vector3f velo_centroid,
     Eigen::Vector3f* estimated_velocity) {
@@ -81,11 +80,6 @@ void ModelBuilder::addPoints(
     // Propogate the motion model forward to estimate the new position.
     motion_model_->propagate(vlf_time_stamp_diff);
 
-    Eigen::Affine3f full_alignment_to_prev;
-
-    // All alignments from which to form a probability distribution.
-    ScoredTransforms<ScoredTransformXYZ> scored_transforms;
-
     // Get the distance to the tracked object.
     //Eigen::Vector4d velo_centroid = frame_helper.getVeloCentroid();
     const double horizontal_distance =
@@ -103,44 +97,29 @@ void ModelBuilder::addPoints(
 
       motion_model_->addCentroidDiff(centroidDiff, vlf_time_stamp_diff);
 
-      const Eigen::Vector3f& mean_displacement = motion_model_->mean_displacement();
-
-      full_alignment_to_prev = Eigen::Translation<float, 3>(mean_displacement);
-
+      Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
+      *estimated_velocity = mean_velocity;
     }
     else {
       // Align.
+      ScoredTransforms<ScoredTransformXYZ> scored_transforms;
       precision_tracker_.track(current_points, previousModel,
           horizontal_distance, *motion_model_, &scored_transforms);
 
       motion_model_->addTransformsWeightedGaussian(scored_transforms,
                                                   vlf_time_stamp_diff);
-    }
-    Eigen::Vector3f centroid;
-    PrecisionTracker::computeCentroid(current_points, &centroid);
-    Eigen::Vector4d centroid_4d;
-    centroid_4d(0) = centroid(0);
-    centroid_4d(1) = centroid(1);
-    centroid_4d(2) = centroid(2);
-    centroid_4d(3) = 1;
-    Eigen::Affine3f real_transform_to_prev =
-        TransformHelper::computeRealTransform(
-            full_alignment_to_prev,
-            centroid_4d);
+      if (kUseMode) {
+        ScoredTransformXYZ best_transform;
+        scored_transforms.findBest(&best_transform);
 
-    Eigen::Vector3f mean_displacement = motion_model_->mean_displacement();
-    Eigen::Affine3f mean_translation; mean_translation = Eigen::Translation3f(mean_displacement);
+        Eigen::Vector3f best_displacement;
+        best_transform.getEigen(&best_displacement);
 
-    Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
-
-    Eigen::Affine3f estimated_full_alignment_to_prev;
-
-    if (kUseMode) {
-      //*estimated_velocity = real_transform_to_prev.matrix() / vlf_time_stamp_diff_;
-      estimated_full_alignment_to_prev = full_alignment_to_prev;
-    } else {
-      *estimated_velocity = mean_velocity;
-      estimated_full_alignment_to_prev = mean_translation;
+        *estimated_velocity = best_displacement / vlf_time_stamp_diff_;
+      } else {
+        Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
+        *estimated_velocity = mean_velocity;
+      }
     }
   }
   *previousModel = *current_points;

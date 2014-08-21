@@ -71,7 +71,6 @@ public:
     return mean_velocity_.cast<float>();
   }
 
-	Eigen::Vector3f mean_displacement() const;
 	bool valid() const { return valid_; }
 
 	const Eigen::Vector3d& get_mean_delta_position() const {

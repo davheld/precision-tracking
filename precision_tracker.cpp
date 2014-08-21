@@ -16,7 +16,7 @@
 namespace {
 
 // Whether to include color probabilities when performing the alignment.
-const bool use_color = true;
+const bool use_color = false;
 
 // We downsample the current frame of the tracked object to have this many
 // points.
@@ -112,13 +112,13 @@ PrecisionTracker::~PrecisionTracker() {
 //for each x, y, z:
 //best, min, max, stepsize, numsteps?
 void PrecisionTracker::track(
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const double initial_xy_sampling_resolution,
     const double initial_z_sampling_resolution,
     pair <double, double> xRange,
     pair <double, double> yRange,
     pair <double, double> zRange,
-    const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > prev_points,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
     const Eigen::Vector3f &current_points_centroid,
     const MotionModel& motion_model,
     const double down_sample_factor_prev,
@@ -153,8 +153,8 @@ void PrecisionTracker::track(
 
 
 void PrecisionTracker::track(
-    const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > current_points,
-    const boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > previousModel,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModel,
     const double horizontal_distance,
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {

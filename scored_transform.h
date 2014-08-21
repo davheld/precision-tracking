@@ -81,6 +81,8 @@ public:
 
   virtual ~ScoredTransformXYZ();
 
+  void getEigen(Eigen::Vector3f* translation);
+
   // Getters.
   double getX() const       { return x_;    }
   double getY() const       { return y_;    }
@@ -258,7 +260,7 @@ template <class TransformType>
 const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs() const {
   const size_t num_transforms = scored_transforms_.size();
 
-  if (normalized_probs_.size() != num_transforms) {
+  //if (normalized_probs_.size() != num_transforms) {
     // We need to recompute the normalized probabilities.
 
     // First obtain a list of all probabilities.
@@ -312,7 +314,7 @@ const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs()
     for (size_t i = 0; i < num_transforms; ++i) {
       normalized_probs_[i] /= sum_prob2;
     }
-  }
+  //}
 
   return normalized_probs_;
 }

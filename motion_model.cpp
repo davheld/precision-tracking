@@ -346,11 +346,6 @@ void MotionModel::addTransformsWeightedGaussian(
 	}
 }
 
-Eigen::Vector3f MotionModel::mean_displacement() const {
-	return mean_velocity_.cast<float>() * time_diff_;
-}
-
-
 MotionModel::MotionModel()
 	:pdf_constant_(1),
 	 min_score_(1e-4),
