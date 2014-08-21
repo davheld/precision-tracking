@@ -9,13 +9,10 @@
 #define MOTION_MODEL_H_
 
 #include <vector>
+
 #include <Eigen/Eigen>
-#include <iostream>
 
 #include "scored_transform.h"
-
-using std::cout;
-using std::endl;
 
 struct TransformComponents{
   TransformComponents()
@@ -36,7 +33,8 @@ public:
       const double& time_diff);
 
 	// Add centroid diff and update the Kalman filter.
-	void addCentroidDiff(const Eigen::Vector3f& centroid_diff, const double& time_diff);
+  void addCentroidDiff(const Eigen::Vector3f& centroid_diff,
+                       const double time_diff);
 
 	void propagate(const double& time_diff);
 
@@ -86,7 +84,6 @@ private:
 	Eigen::Matrix3d covariance_delta_position_inv_;
 
   double pdf_constant_;
-	double time_diff_;
 	double min_score_;
 
 	bool valid_eigen_vectors_;

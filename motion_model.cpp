@@ -7,26 +7,19 @@
 
 #include "motion_model.h"
 
-#include <iostream>
-#include <algorithm>
-
 #include <boost/math/constants/constants.hpp>
 
-using std::endl;
-using std::vector;
 using std::max;
-using std::cout;
-
 
 const double pi = boost::math::constants::pi<double>();
 
 // How much noise to add to the velocity covariance per 0.1 milliseconds of
 // propagation.
-const double kPropagationVarianceXY = getenv("PROP_VARIANCE") ? atof(getenv("PROP_VARIANCE")) : 0.1;
-const double kPropagationVarianceZ = getenv("PROP_VARIANCE_Z") ? atof(getenv("PROP_VARIANCE_Z")) : 0.1;
+const double kPropagationVarianceXY = 0.1;
+const double kPropagationVarianceZ = 0.1;
 
-const double kMeasurementVariance = getenv("MEASUREMENT_VARIANCE") ? atof(getenv("MEASUREMENT_VARIANCE")) : 0.5;
-
+// The measurement noise for a centroid-based Kalman filter.
+const double kCentroidMeasurementVariance = 0.4;
 
 
 bool MotionModel::computeCovarianceVelocity(
@@ -137,42 +130,31 @@ double MotionModel::computeScore(const double x, const double y,
   return computeScore(components);
 }
 
-double MotionModel::computeScore(const TransformComponents& components) const{
-	if (!valid_){
+double MotionModel::computeScore(const TransformComponents& components) const {
+  if (!valid_){
 		return 1;
 	} else {
 		Eigen::Vector3d x(components.x, components.y, components.z);
 
-    Eigen::Vector3d diff = x-mean_delta_position_;
-		Eigen::Vector3d a = covariance_delta_position_inv_ * diff;
-		double b = -0.5 * diff.transpose() * a;
-		double p_translation = max(pdf_constant_ * exp(b), min_score_);
+    Eigen::Vector3d diff = x - mean_delta_position_;
+    double log_prob =
+        -0.5 * diff.transpose() * covariance_delta_position_inv_ * diff;
+    double prob = max(pdf_constant_ * exp(log_prob), min_score_);
 
-
-		/*Eigen::Vector2d r(components.roll, components.pitch);
-		double b_rotation = -0.5 * r.transpose() * covariance_delta_rotation_inv_ * r;
-		double p_rotation = max(exp(b_rotation), 1e-10);
-		*/
-		//return p_translation * p_rotation;
-
-		return p_translation;
-		//double p = max(exp(b), min_score_);
+    return prob;
 	}
 }
 
-void MotionModel::addCentroidDiff(const Eigen::Vector3f& centroid_diff, const double& recorded_time_diff){
+void MotionModel::addCentroidDiff(const Eigen::Vector3f& centroid_diff,
+                                  const double recorded_time_diff){
 
   const double time_diff = max(0.01, recorded_time_diff);
-
-	time_diff_ = time_diff;
 
 	//measurement vector
 	Eigen::Vector3d z(centroid_diff(0), centroid_diff(1), centroid_diff(2));
 
 	//convert this to a velocity
-	z = z / time_diff_;
-
-	//PRINT_WARN_STREAM("z: " << endl << z);
+  z = z / time_diff;
 
 	//C is the identity
 	Eigen::Matrix3d C = Eigen::Matrix3d::Identity();
@@ -180,7 +162,7 @@ void MotionModel::addCentroidDiff(const Eigen::Vector3f& centroid_diff, const do
 	//x is (v_x, v_y, v_z)
 
 	//a variance of 1
-	Eigen::Matrix3d Q = Eigen::Matrix3d::Identity();
+  Eigen::Matrix3d Q = kCentroidMeasurementVariance * Eigen::Matrix3d::Identity();
 
 	Eigen::MatrixXd K = covariance_velocity_ * C.transpose() * (C * covariance_velocity_ * C.transpose() + Q).inverse();
 
@@ -189,9 +171,7 @@ void MotionModel::addCentroidDiff(const Eigen::Vector3f& centroid_diff, const do
 	covariance_velocity_ = (Eigen::Matrix3d::Identity() - K * C) * covariance_velocity_;
 
 	valid_ = true;
-
 }
-
 
 void MotionModel::propagate(const double& recorded_time_diff){
 
@@ -199,7 +179,7 @@ void MotionModel::propagate(const double& recorded_time_diff){
 		//nothing to propagate!
 		return;
 	}
-	time_diff_ = max(recorded_time_diff, 0.01);
+  const double time_diff = max(recorded_time_diff, 0.01);
 
   //covariance_delta_position_inv_ = covariance_delta_position_.inverse();
 
@@ -207,14 +187,14 @@ void MotionModel::propagate(const double& recorded_time_diff){
 	//the longer the time, the more uncertainty we add (variance adds linearly)
 	double min_time = 0.05; //the minimum perceptible time
 	covariance_velocity_ +=
-			(covariance_propagation_uncertainty_ * (time_diff_ + min_time) / 0.1);
+      (covariance_propagation_uncertainty_ * (time_diff + min_time) / 0.1);
 	//covariance_velocity_ += covariance_propagation_uncertainty_ * time_diff / 0.1;
 
-	mean_delta_position_ = mean_velocity_ * time_diff_;
+  mean_delta_position_ = mean_velocity_ * time_diff;
 
   //covariance_delta_position_ = covariance_velocity_ * pow(time_diff_,2);
 
-  covariance_delta_position_ += covariance_velocity_ * pow(time_diff_,2);
+  covariance_delta_position_ += covariance_velocity_ * pow(time_diff,2);
   //covariance_delta_position_ /= 2;
   covariance_delta_position_(2,2) =
       std::max(covariance_delta_position_(2,2), 0.1);
@@ -272,8 +252,6 @@ void MotionModel::addTransformsWeightedGaussian(
 		const double& recorded_time_diff) {
 	const double time_diff = max(0.01, recorded_time_diff);
 
-	time_diff_ = time_diff;
-
   mean_velocity_ = computeMeanVelocity(transforms, time_diff);
 
   mean_delta_position_ = mean_velocity_ * recorded_time_diff;
@@ -295,30 +273,16 @@ MotionModel::MotionModel()
    valid_eigen_vectors_(false),
 	 valid_(false)
 {
-
 	//R_t in the kalman filter - the amount of uncertainty propagation in 0.1 s
-  double xy_variance = kPropagationVarianceXY; //1; //0.25;
-	double z_variance = kPropagationVarianceZ; //0.1
 	covariance_propagation_uncertainty_ = Eigen::Matrix3d::Zero();
-	covariance_propagation_uncertainty_(0,0) = xy_variance;
-	covariance_propagation_uncertainty_(1,1) = xy_variance;
-	covariance_propagation_uncertainty_(2,2) = z_variance;
+  covariance_propagation_uncertainty_(0,0) = kPropagationVarianceXY;
+  covariance_propagation_uncertainty_(1,1) = kPropagationVarianceXY;
+  covariance_propagation_uncertainty_(2,2) = kPropagationVarianceZ;
 
 	//used for centroid kalman filter
 	covariance_velocity_ = 100 * Eigen::Matrix3d::Identity();
 	//covariance_velocity_(2,2) = z_variance;
-	mean_velocity_ = Eigen::Vector3d::Zero();
-
-	//double roll_variance = 0.001;
-	//double pitch_variance = 0.001;
-
-	/*Eigen::Matrix2d covariance_delta_rotation = Eigen::Matrix2d::Zero();
-	covariance_delta_rotation(0,0) = roll_variance;
-	covariance_delta_rotation(1,1) = pitch_variance;
-	covariance_delta_rotation_inv_ = covariance_delta_rotation.inverse();*/
-
-  //PRINT_INFO_STREAM("Adding covariance_propagation_uncertainty_: " << endl
-   //   << covariance_propagation_uncertainty_);
+  mean_velocity_ = Eigen::Vector3d::Zero();
 }
 
 MotionModel::~MotionModel() {

@@ -11,7 +11,7 @@ namespace{
 
 const bool kUseMode = false;
 
-const bool useCentroid = true;
+const bool useCentroid = false;
 
 }  // namespace
 
