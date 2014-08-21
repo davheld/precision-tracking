@@ -23,16 +23,14 @@ public:
 
   void addPoints(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const double& vlfTimestamp,
-      const Eigen::Vector3f velo_centroid,
+      const double timestamp,
+      const Eigen::Vector3f& centroid,
       Eigen::Vector3f* estimated_velocity);
 
 private:
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previousModel_;
-
-  double curr_vlf_timestamp_;
-  double prev_vlf_timestamp_;
+  double prev_timestamp_;
 
   boost::shared_ptr<MotionModel> motion_model_;
 
