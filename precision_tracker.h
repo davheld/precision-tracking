@@ -8,9 +8,9 @@
 #ifndef PRECISION_TRACKER_H_
 #define PRECISION_TRACKER_H_
 
-#include <boost/shared_ptr.hpp>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+
 #include "scored_transform.h"
 #include "motion_model.h"
 #include "adh_tracker3d.h"

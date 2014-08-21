@@ -7,26 +7,6 @@
 
 #include "model_builder.h"
 
-#include <algorithm>
-#include <set>
-#include <vector>
-#include <iostream>
-#include <utility>
-#include <cmath>
-
-#include <Eigen/Dense>
-
-#include <pcl/common/common.h>
-
-using std::max;
-using std::min;
-using std::set;
-using std::vector;
-using std::cout;
-using std::endl;
-using std::pair;
-using std::make_pair;
-
 namespace{
 
 const bool kUseMode = false;
