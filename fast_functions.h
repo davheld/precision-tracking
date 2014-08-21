@@ -22,7 +22,6 @@ public:
   }
 
   double getFastLog(const double n) const;
-  double getFastExp(const double n) const;
 
 private:
 
@@ -33,13 +32,6 @@ private:
   std::vector<double> logs_;
   double log_resolution_;
   double max_log_;
-  //int log_max_vals_;
-
-  std::vector<double> exps_;
-  double exp_resolution_;
-  double max_exp_;
-  //int exp_max_vals_;
-
 };
 
 #endif /* FAST_FUNCTIONS_H_ */
