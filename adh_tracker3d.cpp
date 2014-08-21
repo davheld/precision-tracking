@@ -199,12 +199,9 @@ void ADHTracker3d::makeNewTransforms3D(
       to_remove.push_back(i);
 
       // Get the initial sampling point in this region.
-      const double min_x = old_x - old_xy_sampling_resolution/2 +
-          xy_sampling_resolution/2;
-      const double min_y = old_y - old_xy_sampling_resolution/2 +
-          xy_sampling_resolution/2;
-      const double min_z = old_z - old_z_sampling_resolution/2 +
-          z_sampling_resolution/2;
+      const double min_x = old_x - old_xy_sampling_resolution / 2 + xy_sampling_resolution / 2;
+      const double min_y = old_y - old_xy_sampling_resolution / 2 + xy_sampling_resolution / 2;
+      const double min_z = old_z - old_z_sampling_resolution / 2 + z_sampling_resolution / 2;
 
       // Sample more finely in this region.
       for (int i = 0; i < kReductionFactor; ++i) {

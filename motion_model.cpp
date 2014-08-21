@@ -29,33 +29,31 @@ const double kMeasurementVariance = getenv("MEASUREMENT_VARIANCE") ? atof(getenv
 
 
 
-namespace {
-
-bool computeCovarianceVelocity(
+bool MotionModel::computeCovarianceVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
     const double& time_diff,
     const Eigen::Vector3d& mean_velocity,
-    Eigen::Matrix3d& covariance_velocity){
+    Eigen::Matrix3d& covariance_velocity) const {
 
-	double x_velocity_mean = mean_velocity(0);
-	double y_velocity_mean = mean_velocity(1);
-	double z_velocity_mean = mean_velocity(2);
+  double x_velocity_mean = mean_velocity(0);
+  double y_velocity_mean = mean_velocity(1);
+  double z_velocity_mean = mean_velocity(2);
 
-	covariance_velocity = Eigen::Matrix3d::Zero();
+  covariance_velocity = Eigen::Matrix3d::Zero();
 
   const std::vector<ScoredTransformXYZ>& scored_transforms =
-	    transforms.getScoredTransforms();
+      transforms.getScoredTransforms();
 
-	const std::vector<double>& probs = transforms.getNormalizedProbs();
+  const std::vector<double>& probs = transforms.getNormalizedProbs();
 
   // Compute half of the covariance matrix.
-	const size_t num_transforms = scored_transforms.size();
-	for (size_t i = 0; i < num_transforms; ++i) {
+  const size_t num_transforms = scored_transforms.size();
+  for (size_t i = 0; i < num_transforms; ++i) {
     const ScoredTransformXYZ& scored_transform = scored_transforms[i];
 
-	  const double& prob = probs[i];
+    const double& prob = probs[i];
 
-	  if (prob > 0) {
+    if (prob > 0) {
       const double x_velo_diff = (scored_transform.getX() / time_diff) - x_velocity_mean;
       const double y_velo_diff = (scored_transform.getY() / time_diff) - y_velocity_mean;
       const double z_velo_diff = (scored_transform.getZ() / time_diff) - z_velocity_mean;
@@ -66,19 +64,17 @@ bool computeCovarianceVelocity(
       covariance_velocity(0,1) += prob * x_velo_diff * y_velo_diff;
       covariance_velocity(0,2) += prob * x_velo_diff * z_velo_diff;
       covariance_velocity(1,2) += prob * y_velo_diff * z_velo_diff;
-	  }
-	}
+    }
+  }
 
-	// Fill in the rest of the covariance matrix by symmetry.
-	for (int i = 0; i < 2; i++){
-		for (int j = i+1; j < 3; j++){
-			covariance_velocity(j,i) = covariance_velocity(i,j);
-		}
-	}
-	return true;
+  // Fill in the rest of the covariance matrix by symmetry.
+  for (int i = 0; i < 2; i++){
+    for (int j = i+1; j < 3; j++){
+      covariance_velocity(j,i) = covariance_velocity(i,j);
+    }
+  }
+  return true;
 }
-
-} //namespace
 
 Eigen::Vector3d MotionModel::computeMeanVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms_orig,

@@ -39,11 +39,8 @@ public:
 	void addCentroidDiff(const Eigen::Vector3f& centroid_diff, const double& time_diff);
 
 	void propagate(const double& time_diff);
-	double computeScore(const TransformComponents& components) const;
 
-	Eigen::Vector3d computeMeanVelocity(
-      const ScoredTransforms<ScoredTransformXYZ>& transforms,
-	    const double& time_diff) const;
+	double computeScore(const TransformComponents& components) const;
 
   // Compute the score given the x,y, and z components.
   double computeScore(const double x, const double y, const double z) const;
@@ -71,6 +68,15 @@ public:
 	}
 
 private:
+  Eigen::Vector3d computeMeanVelocity(
+      const ScoredTransforms<ScoredTransformXYZ>& transforms,
+      const double& time_diff) const;
+
+  bool computeCovarianceVelocity(
+      const ScoredTransforms<ScoredTransformXYZ>& transforms,
+      const double& time_diff,
+      const Eigen::Vector3d& mean_velocity,
+      Eigen::Matrix3d& covariance_velocity) const;
 
 	Eigen::Vector3d mean_velocity_;
 	Eigen::Matrix3d covariance_velocity_;
@@ -78,8 +84,8 @@ private:
 	Eigen::Vector3d mean_delta_position_;
 	Eigen::Matrix3d covariance_delta_position_;
 	Eigen::Matrix3d covariance_delta_position_inv_;
-	//Eigen::Matrix2d covariance_delta_rotation_inv_;
-	double pdf_constant_;
+
+  double pdf_constant_;
 	double time_diff_;
 	double min_score_;
 
