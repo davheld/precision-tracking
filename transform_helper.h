@@ -10,14 +10,7 @@
 
 #include <Eigen/Eigen>
 
-struct TransformComponents{
-	TransformComponents()
-		:x(0), y(0), z(0), roll(0), pitch(0), yaw(0)
-	{
-	}
-
-	float x,y,z,roll,pitch,yaw;
-};
+#include "motion_model.h"
 
 class TransformHelper {
 public:

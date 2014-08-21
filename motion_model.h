@@ -17,38 +17,19 @@
 using std::cout;
 using std::endl;
 
-class TransformComponents;
+struct TransformComponents{
+  TransformComponents()
+    :x(0), y(0), z(0), roll(0), pitch(0), yaw(0)
+  {
+  }
 
-
-struct TransformProposal {
-	TransformProposal(
-			const Eigen::Affine3f& full_transform,
-			const double& measurement_prob,
-			const double& prob_with_motion)
-		: full_transform(full_transform),
-		  measurement_prob(measurement_prob),
-		  prob_with_motion(prob_with_motion)
-	{ }
-
-	Eigen::Affine3f full_transform;
-
-	// Used with a Kalman filter, combined later with the motion model.
-	double measurement_prob;
-
-	// Probability that incorporates the measurement model with the motion model.
-	double prob_with_motion;
+  float x,y,z,roll,pitch,yaw;
 };
 
 class MotionModel {
 public:
   MotionModel();
 	virtual ~MotionModel();
-
-	// Use a Kalman filter to estimate the mean and covariance velocity.
-	void addTransformsKalman(
-			const std::vector<TransformProposal>& transformProposals,
-			const Eigen::Vector4d& centroid,
-			const double& time_diff);
 
   void addTransformsWeightedGaussian(
       const ScoredTransforms<ScoredTransformXYZ>& transforms,

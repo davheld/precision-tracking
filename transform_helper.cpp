@@ -9,16 +9,8 @@
 
 #include <stdint.h>
 #include <pcl/common/eigen.h>
-//#include <pcl/common/transform.h>
-
-//#include "helper.h"
-
 
 using namespace Eigen;
-
-/*namespace{
-	const char* logger = ROSCONSOLE_DEFAULT_NAME ".transform_helper";
-}*/
 
 Eigen::Affine3f TransformHelper::computeRealTransform(
 		const Eigen::Affine3f& full_transform, const Eigen::Vector4d& centroid) {

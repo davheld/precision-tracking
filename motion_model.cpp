@@ -268,62 +268,6 @@ void MotionModel::propagate(const double& recorded_time_diff){
 	}
 }
 
-void MotionModel::addTransformsKalman(
-		const vector<TransformProposal>& transformProposals,
-		const Eigen::Vector4d& centroid,
-		const double& recorded_time_diff) {
-
-  const double time_diff = max(0.01, recorded_time_diff);
-
-	time_diff_ = time_diff;
-
-	//make our C_t matrix to hold one row for every measurement in every dimension
-	//Eigen::MatrixXf C(3 * transformProposals.size(), 3);
-	Eigen::MatrixXd C = Eigen::Matrix3d::Identity().replicate(transformProposals.size(), 1);
-
-	printf("Computing normalizer");
-	double prob_sum = 0;
-	for (size_t i = 0; i < transformProposals.size(); ++i) {
-		prob_sum += transformProposals[i].measurement_prob;
-	}
-
-	printf("Computing Q_vect and z");
-	Eigen::MatrixXd Q_vect(3 * transformProposals.size(), 1);
-	Eigen::MatrixXd z(3 * transformProposals.size(), 1);
-	for (size_t i = 0; i < transformProposals.size(); i++) {
-		TransformProposal transform_proposal = transformProposals[i];
-		TransformComponents components = TransformHelper::computeComponents(
-				transform_proposal.full_transform, centroid);
-
-		double normalized_prob = transform_proposal.measurement_prob / prob_sum;
-		double var = -log(normalized_prob);
-
-		z(i*3) = (components.x / time_diff);
-		z(i*3+1) = (components.y / time_diff);
-		z(i*3+2) = (components.z / time_diff);
-
-		for (int j = 0; j < 3; j++){
-			Q_vect(i*3 + j) = var;
-		}
-	}
-
-	printf("Computing Q");
-	Eigen::MatrixXd Q = Q_vect.asDiagonal();
-
-	printf("Computing K");
-	Eigen::MatrixXd K =
-			covariance_velocity_ * C.transpose() *
-			(C * covariance_velocity_ * C.transpose() + Q).inverse();
-
-	printf("Computing mean");
-	mean_velocity_ += K * (z - C * mean_velocity_);
-
-	printf("Computing covariance");
-	covariance_velocity_ = (Eigen::Matrix3d::Identity() - K * C) * covariance_velocity_;
-
-	valid_ = true;
-}
-
 void MotionModel::addTransformsWeightedGaussian(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
 		const double& recorded_time_diff) {
