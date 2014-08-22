@@ -18,6 +18,12 @@
 
 class PrecisionTracker {
 public:
+  // Whether to include color probabilities when performing the alignment.
+  // Using color is more accurate but much slower.
+  PrecisionTracker(const bool use_color);
+
+  // Default constructor - does not use color. This is slightly less
+  // accurate but much faster than the version with color.
   PrecisionTracker();
   virtual ~PrecisionTracker();
 
@@ -43,6 +49,10 @@ private:
   ADHTracker3d adh_tracker3d_;
   boost::shared_ptr<AlignmentEvaluator> alignment_evaluator_;
   DownSampler down_sampler_;
+
+  // Whether to include color probabilities when performing the alignment.
+  // Using color is more accurate but much slower.
+  bool use_color_;
 };
 
 #endif /* PRECISION_TRACKER_H_ */

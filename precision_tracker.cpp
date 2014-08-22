@@ -17,9 +17,6 @@
 
 namespace {
 
-// Whether to include color probabilities when performing the alignment.
-const bool use_color = false;
-
 // We downsample the current frame of the tracked object to have this many
 // points.
 const int kCurrFrameDownsample = 150;
@@ -56,7 +53,15 @@ using std::max;
 } // namespace
 
 PrecisionTracker::PrecisionTracker()
-  : down_sampler_(stochastic_downsample)
+  : down_sampler_(stochastic_downsample),
+    use_color_(false)
+{
+  alignment_evaluator_.reset(new DensityGridEvaluator);
+}
+
+PrecisionTracker::PrecisionTracker(const bool use_color)
+  : down_sampler_(stochastic_downsample),
+    use_color_(use_color)
 {
   if (use_color) {
     alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator);
@@ -64,6 +69,7 @@ PrecisionTracker::PrecisionTracker()
     alignment_evaluator_.reset(new DensityGridEvaluator);
   }
 }
+
 
 PrecisionTracker::~PrecisionTracker() {
   // TODO Auto-generated destructor stub

@@ -19,7 +19,7 @@ Tracker::Tracker()
   motion_model_.reset(new MotionModel);
 
   if (use_precision_tracker_) {
-    precision_tracker_.reset(new PrecisionTracker);
+    precision_tracker_.reset(new PrecisionTracker(use_color_));
   }
 
 }
@@ -36,7 +36,7 @@ Tracker::Tracker(const bool use_precision_tracker,
   motion_model_.reset(new MotionModel);
 
   if (use_precision_tracker_) {
-    precision_tracker_.reset(new PrecisionTracker);
+    precision_tracker_.reset(new PrecisionTracker(use_color_));
   }
 }
 

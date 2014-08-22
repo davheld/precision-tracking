@@ -267,7 +267,7 @@ void trackAndEvaluate(
 
   // Evaluate the tracking accuracy for nearby objects.
   const double max_distance = 5;
-  printf("Evaluating for tracks within %lf m\n", max_distance);
+  printf("Evaluating only for objects within %lf m:\n", max_distance);
   boost::shared_ptr<std::vector<bool> > filter(new std::vector<bool>);
   getWithinDistance(track_manager, max_distance, *filter);
   evaluateTracking(velocity_estimates, gt_folder, filter);
@@ -275,7 +275,8 @@ void trackAndEvaluate(
 
 void testKalman(const track_manager_color::TrackManagerColor& track_manager,
                 const string gt_folder) {
-  printf("Tracking objects with the centroid-based Kalman filter baseline - please wait...\n");
+  printf("Tracking objects with the centroid-based Kalman filter baseline. "
+         "This method is very fast but not very accurate. Please wait...\n");
   const bool use_precision_tracker = false;
   const bool use_color = false;
   const bool use_mean = true;
@@ -283,9 +284,11 @@ void testKalman(const track_manager_color::TrackManagerColor& track_manager,
   trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
 }
 
-void testPrecisionTracker(const track_manager_color::TrackManagerColor& track_manager,
-                          const string gt_folder) {
-  printf("\nTracking objects with our precision tracker - please wait...\n");
+void testPrecisionTracker(
+    const track_manager_color::TrackManagerColor& track_manager,
+    const string gt_folder) {
+  printf("\nTracking objects with our precision tracker. "
+         "This method is accurate and fairly fast. Please wait...\n");
   const bool use_precision_tracker = true;
   const bool use_color = false;
   const bool use_mean = true;
@@ -293,9 +296,11 @@ void testPrecisionTracker(const track_manager_color::TrackManagerColor& track_ma
   trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
 }
 
-void testPrecisionTrackerColor(const track_manager_color::TrackManagerColor& track_manager,
-                               const string gt_folder) {
-  printf("\nTracking objects with our precision tracker and color - please wait (will be slow)...\n");
+void testPrecisionTrackerColor(
+    const track_manager_color::TrackManagerColor& track_manager,
+    const string gt_folder) {
+  printf("\nTracking objects with our precision tracker and color. "
+         "This method is a bit more accurate but much slower. Please wait (will be slow)...\n");
   const bool use_precision_tracker = true;
   const bool use_color = true;
   const bool use_mean = true;
