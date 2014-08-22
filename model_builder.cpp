@@ -15,8 +15,7 @@ const bool useCentroid = false;
 
 }  // namespace
 
-ModelBuilder::ModelBuilder(
-    const bool visualize)
+ModelBuilder::ModelBuilder()
     : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
       prev_timestamp_(-1)
 {

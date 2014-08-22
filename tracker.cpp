@@ -165,7 +165,7 @@ int main(int argc, char **argv)
   printf("Found %zu tracks\n", tracks.size());
 
   // Structure for tracking.
-  ModelBuilder aligner(false);
+  ModelBuilder aligner;
 
   printf("Tracking objects - please wait...\n\n");
 

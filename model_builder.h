@@ -16,7 +16,7 @@
 
 class ModelBuilder {
 public:
-  ModelBuilder(const bool visualize);
+  ModelBuilder();
   virtual ~ModelBuilder();
 
   void clear();

@@ -70,11 +70,10 @@ private:
       const ScoredTransforms<ScoredTransformXYZ>& transforms,
       const double time_diff) const;
 
-  void computeCovarianceVelocity(
+  Eigen::Matrix3d computeCovarianceVelocity(
       const ScoredTransforms<ScoredTransformXYZ>& transforms,
       const double time_diff,
-      const Eigen::Vector3d& mean_velocity,
-      Eigen::Matrix3d& covariance_velocity) const;
+      const Eigen::Vector3d& mean_velocity) const;
 
 	Eigen::Vector3d mean_velocity_;
 	Eigen::Matrix3d covariance_velocity_;

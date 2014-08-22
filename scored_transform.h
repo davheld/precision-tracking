@@ -260,61 +260,57 @@ template <class TransformType>
 const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs() const {
   const size_t num_transforms = scored_transforms_.size();
 
-  //if (normalized_probs_.size() != num_transforms) {
-    // We need to recompute the normalized probabilities.
+  // First obtain a list of all probabilities.
+  std::vector<double> log_probabilities(num_transforms);
+  for (size_t i = 0; i < num_transforms; ++i) {
+    log_probabilities[i] = scored_transforms_[i].getUnnormalizedLogProb();
+  }
 
-    // First obtain a list of all probabilities.
-    std::vector<double> log_probabilities(num_transforms);
+  // Make all the scores positive and normalized.
+
+  // Find the max log probablity.
+  const double max_log_prob = *std::max_element(
+      log_probabilities.begin(), log_probabilities.end());
+
+  // Find the value such that max_log_prob + n_factor * log(10) = max_x.
+  // This is equivalent to: prob * 10 ^ n_factor = max_x.
+  const double max_x = 0;
+  const double n_factor = (max_x - max_log_prob) / log(10);
+
+  // Multiply all probabilities by 10 ^ n_factor, and then find the
+  // (not log) probability.
+  normalized_probs_.clear();
+  normalized_probs_.reserve(num_transforms);
+  for (size_t i = 0; i < num_transforms; ++i) {
+    const double prob = exp(log_probabilities[i] + n_factor * log(10));
+    normalized_probs_.push_back(prob);
+  }
+
+  // Normalize.
+  //const double sum_prob =
+//      std::accumulate(probabilities->begin(), probabilities->end(), 0);
+  double sum_prob2 = 0;
+  for (size_t i = 0; i < num_transforms; ++i) {
+    sum_prob2 += normalized_probs_[i];
+  }
+
+  // Verfify that something bad didn't happen.
+  if (sum_prob2 == 0) {
+    printf("Log probs:\n");
     for (size_t i = 0; i < num_transforms; ++i) {
-      log_probabilities[i] = scored_transforms_[i].getUnnormalizedLogProb();
+      printf("%lf\n", log_probabilities[i]);
     }
-
-    // Make all the scores positive and normalized.
-
-    // Find the max log probablity.
-    const double max_log_prob = *std::max_element(
-        log_probabilities.begin(), log_probabilities.end());
-
-    // Find the value such that max_log_prob + n_factor * log(10) = max_x.
-    // This is equivalent to: prob * 10 ^ n_factor = max_x.
-    const double max_x = 0;
-    const double n_factor = (max_x - max_log_prob) / log(10);
-
-    // Multiply all probabilities by 10 ^ n_factor, and then find the
-    // (not log) probability.
-    normalized_probs_.clear();
-    normalized_probs_.reserve(num_transforms);
+    printf("Probs:\n");
     for (size_t i = 0; i < num_transforms; ++i) {
-      const double prob = exp(log_probabilities[i] + n_factor * log(10));
-      normalized_probs_.push_back(prob);
+      printf("%lf\n", normalized_probs_[i]);
     }
+    exit(1);
+  }
 
-    // Normalize.
-    //const double sum_prob =
-  //      std::accumulate(probabilities->begin(), probabilities->end(), 0);
-    double sum_prob2 = 0;
-    for (size_t i = 0; i < num_transforms; ++i) {
-      sum_prob2 += normalized_probs_[i];
-    }
-
-    // Verfify that something bad didn't happen.
-    if (sum_prob2 == 0) {
-      printf("Log probs:\n");
-      for (size_t i = 0; i < num_transforms; ++i) {
-        printf("%lf\n", log_probabilities[i]);
-      }
-      printf("Probs:\n");
-      for (size_t i = 0; i < num_transforms; ++i) {
-        printf("%lf\n", normalized_probs_[i]);
-      }
-      exit(1);
-    }
-
-    // Normalize the probabilities.
-    for (size_t i = 0; i < num_transforms; ++i) {
-      normalized_probs_[i] /= sum_prob2;
-    }
-  //}
+  // Normalize the probabilities.
+  for (size_t i = 0; i < num_transforms; ++i) {
+    normalized_probs_[i] /= sum_prob2;
+  }
 
   return normalized_probs_;
 }

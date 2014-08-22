@@ -11,29 +11,85 @@
 
 using std::max;
 
+namespace {
+
 const double pi = boost::math::constants::pi<double>();
 
-// How much noise to add to the velocity covariance per 0.1 milliseconds of
-// propagation.
-const double kPropagationVarianceXY = 0.1;
-const double kPropagationVarianceZ = 0.1;
+// How much noise to add to the velocity covariance.
+const double kPropagationVarianceXY = 10;
+const double kPropagationVarianceZ = 10;
 
 // The measurement noise for a centroid-based Kalman filter.
-const double kCentroidMeasurementVariance = 0.4;
+const double kCentroidMeasurementNoise = 0.4;
+
+// The initial velocity variance for a centroid-based Kalman filter.
+const double kCentroidInitVelocityVariance = 5;
 
 
-void MotionModel::computeCovarianceVelocity(
+} // namespace
+
+MotionModel::MotionModel()
+  :pdf_constant_(1),
+   min_score_(1e-4),
+   valid_eigen_vectors_(false),
+   valid_(false)
+{
+  // We assume that, at each time step, we independently sample an acceleration
+  // with 0 mean and covariance of covariance_propagation_uncertainty_.
+  covariance_propagation_uncertainty_ = Eigen::Matrix3d::Zero();
+  covariance_propagation_uncertainty_(0,0) = kPropagationVarianceXY;
+  covariance_propagation_uncertainty_(1,1) = kPropagationVarianceXY;
+  covariance_propagation_uncertainty_(2,2) = kPropagationVarianceZ;
+
+  // For the centroid Kalman filter, we set the initial mean and covariance.
+  // The precision tracker uses the first alignment to initialize the mean
+  // and covariance.
+  covariance_velocity_ =
+      kCentroidInitVelocityVariance * Eigen::Matrix3d::Identity();
+  mean_velocity_ = Eigen::Vector3d::Zero();
+}
+
+MotionModel::~MotionModel() {
+  // TODO Auto-generated destructor stub
+}
+
+void MotionModel::addTransformsWeightedGaussian(
+    const ScoredTransforms<ScoredTransformXYZ>& transforms,
+    const double& recorded_time_diff) {
+  // If the recorded_time_diff is 0 or very small, we avoid numerical
+  // issues by thresholding at 0.01.
+  const double time_diff = max(0.01, recorded_time_diff);
+
+  // Compute the mean velocity from the distribution of tranform probabilities.
+  mean_velocity_ = computeMeanVelocity(transforms, time_diff);
+
+  mean_delta_position_ = mean_velocity_ * recorded_time_diff;
+
+  // Compute the covariance velocity from the distribution of tranform
+  // probabilities.
+  covariance_velocity_ = computeCovarianceVelocity(
+        transforms, time_diff, mean_velocity_);
+
+  // Because covariance is quadratic, we must multiply by the square of the
+  // time difference.
+  covariance_delta_position_ = covariance_velocity_ * pow(time_diff, 2);
+
+  // The motion model is now valid.
+  valid_ = true;
+}
+
+
+Eigen::Matrix3d MotionModel::computeCovarianceVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
     const double time_diff,
-    const Eigen::Vector3d& mean_velocity,
-    Eigen::Matrix3d& covariance_velocity) const {
+    const Eigen::Vector3d& mean_velocity) const {
 
   double x_velocity_mean = mean_velocity(0);
   double y_velocity_mean = mean_velocity(1);
   double z_velocity_mean = mean_velocity(2);
 
   // Initialize the covariance velocity to zero.
-  covariance_velocity = Eigen::Matrix3d::Zero();
+  Eigen::Matrix3d covariance_velocity = Eigen::Matrix3d::Zero();
 
   const std::vector<ScoredTransformXYZ>& scored_transforms =
       transforms.getScoredTransforms();
@@ -66,15 +122,15 @@ void MotionModel::computeCovarianceVelocity(
       covariance_velocity(j,i) = covariance_velocity(i,j);
     }
   }
+
+  return covariance_velocity;
 }
 
 Eigen::Vector3d MotionModel::computeMeanVelocity(
-    const ScoredTransforms<ScoredTransformXYZ>& transforms_orig,
+    const ScoredTransforms<ScoredTransformXYZ>& transforms,
     const double time_diff) const {
   // Compute the mean delta position.
   TransformComponents mean_delta_position;
-
-  ScoredTransforms<ScoredTransformXYZ> transforms = transforms_orig;
 
   // Get the transforms and their probabilities.
   const std::vector<ScoredTransformXYZ>& scored_transforms =
@@ -114,10 +170,6 @@ Eigen::Vector3d MotionModel::computeMeanVelocity(
 
 double MotionModel::computeScore(const double x, const double y,
     const double z) const {
-  if (!valid_){
-    return 1;
-  }
-
   TransformComponents components;
   components.x = x;
   components.y = y;
@@ -126,158 +178,134 @@ double MotionModel::computeScore(const double x, const double y,
 }
 
 double MotionModel::computeScore(const TransformComponents& components) const {
-  if (!valid_){
+  if (!valid_) {
 		return 1;
-	} else {
+  } else {
 		Eigen::Vector3d x(components.x, components.y, components.z);
 
+    // Compute the probability from the normal distribution.
     Eigen::Vector3d diff = x - mean_delta_position_;
     double log_prob =
         -0.5 * diff.transpose() * covariance_delta_position_inv_ * diff;
     double prob = max(pdf_constant_ * exp(log_prob), min_score_);
 
     return prob;
-	}
+  }
 }
 
 void MotionModel::addCentroidDiff(const Eigen::Vector3f& centroid_diff,
                                   const double recorded_time_diff){
-
+  // If the recorded_time_diff is 0 or very small, we avoid numerical
+  // issues by thresholding at 0.01.
   const double time_diff = max(0.01, recorded_time_diff);
 
-	//measurement vector
-	Eigen::Vector3d z(centroid_diff(0), centroid_diff(1), centroid_diff(2));
+  // Compute the position measurement vector.
+  Eigen::Vector3d z(centroid_diff(0), centroid_diff(1), centroid_diff(2));
 
-	//convert this to a velocity
+  // Convert to a velocity measurement.
   z = z / time_diff;
 
-	//C is the identity
+  // C is the identity because we have the velocity corrupted by noise.
 	Eigen::Matrix3d C = Eigen::Matrix3d::Identity();
 
-	//x is (v_x, v_y, v_z)
+  // Compute the measurement covariance.
+  Eigen::Matrix3d Q =
+      kCentroidMeasurementNoise * Eigen::Matrix3d::Identity();
 
-	//a variance of 1
-  Eigen::Matrix3d Q = kCentroidMeasurementVariance * Eigen::Matrix3d::Identity();
+  // Compute the Kalman gain.
+  Eigen::MatrixXd K = covariance_velocity_ * C.transpose() *
+      (C * covariance_velocity_ * C.transpose() + Q).inverse();
 
-	Eigen::MatrixXd K = covariance_velocity_ * C.transpose() * (C * covariance_velocity_ * C.transpose() + Q).inverse();
-
+  // Update the mean velocity.
 	mean_velocity_ += K * (z - C * mean_velocity_);
 
-	covariance_velocity_ = (Eigen::Matrix3d::Identity() - K * C) * covariance_velocity_;
+  // Update the covariance velocity.
+  covariance_velocity_ =
+      (Eigen::Matrix3d::Identity() - K * C) * covariance_velocity_;
 
+  // After the first measurement, the motion model is valid.
 	valid_ = true;
 }
 
 void MotionModel::propagate(const double& recorded_time_diff){
 
 	if (!valid_){
-		//nothing to propagate!
+    // Nothing to propagate!
 		return;
 	}
+
+  // If the recorded_time_diff is 0 or very small, we avoid numerical
+  // issues by thresholding the minimum time diff.
   const double time_diff = max(recorded_time_diff, 0.01);
-
-  //covariance_delta_position_inv_ = covariance_delta_position_.inverse();
-
-	//add uncertainty to the covariance velocity.
-	//the longer the time, the more uncertainty we add (variance adds linearly)
-	double min_time = 0.05; //the minimum perceptible time
-	covariance_velocity_ +=
-      (covariance_propagation_uncertainty_ * (time_diff + min_time) / 0.1);
-	//covariance_velocity_ += covariance_propagation_uncertainty_ * time_diff / 0.1;
 
   mean_delta_position_ = mean_velocity_ * time_diff;
 
-  //covariance_delta_position_ = covariance_velocity_ * pow(time_diff_,2);
+  // Add uncertainty to the covariance velocity.
+  // We assume that, at each time step, we independently sample an acceleration
+  // with 0 mean and covariance of covariance_propagation_uncertainty_.  The
+  // effect of the acceleration uncertainty on the velocity covariance is then
+  // given by the below formula.
+  covariance_velocity_ +=
+      covariance_propagation_uncertainty_ * pow(time_diff,2);
 
+  // Similarly to the above, the uncertainty in velocity has a quadratic
+  // effect with time on the uncertainty on the position.
   covariance_delta_position_ += covariance_velocity_ * pow(time_diff,2);
-  //covariance_delta_position_ /= 2;
+
+  // If we are not estimating the vertical motion, we could end up with a
+  // covariance of 0, which could lead to numerical instability.  Instead,
+  // we set a minimum threshold the vertical uncertainty.
   covariance_delta_position_(2,2) =
       std::max(covariance_delta_position_(2,2), 0.1);
 
   covariance_delta_position_inv_ = covariance_delta_position_.inverse();
 
-	int k = mean_delta_position_.size();
-  pdf_constant_ = 1 / (pow(2 * pi, static_cast<double>(k)/2) *
-                       pow(covariance_delta_position_.determinant(), 0.5));
+  // Compute the constant in front of the multivariate Guassian.
+  const double k = mean_delta_position_.size();
+  const double determinant = covariance_delta_position_.determinant();
+  pdf_constant_ = 1 / (pow(2 * pi, k/2) * pow(determinant, 0.5));
 
-	//compute max score
+  // Compute the pdf's maximum value.
 	TransformComponents mean_components;
 	mean_components.x = mean_delta_position_(0);
 	mean_components.y = mean_delta_position_(1);
 	mean_components.z = mean_delta_position_(2);
+  const double max_score = computeScore(mean_components);
 
-	double max_score = computeScore(mean_components);
-
-	//compute eigenvalues
+  // Compute the eigenvalues of the position covariance matrix.
   Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(
         covariance_delta_position_);
+
 	if (eigensolver.info() != Eigen::Success){
 		min_score_ = max_score / 100;
     printf("Warning - Cannot compute eigenvalues - instead chose min_score"
-           "as %lf", min_score_);
-
+           "as %lf\n", min_score_);
 	} else {
-		Eigen::Vector3d eigen_values = eigensolver.eigenvalues();
-		double max_eigenvalue = eigen_values(2);
+    const Eigen::Vector3d eigen_values = eigensolver.eigenvalues();
+    const double max_eigenvalue = eigen_values(2);
 
 		// Save eigenvectors.
 		eigen_vectors_ = eigensolver.eigenvectors();
 		valid_eigen_vectors_ = true;
 
-		Eigen::Vector3d max_eigenvector = eigensolver.eigenvectors().col(2);
+    const Eigen::Vector3d max_eigenvector = eigensolver.eigenvectors().col(2);
 
-		double sigma = 5;
+    // Find the value of the pdf at num_sigmas out from the mean.
+    const double num_sigmas = 5;
 
 		TransformComponents sigma_components;
-    sigma_components.x = mean_delta_position_(0) +
-        max_eigenvector(0) * sqrt(max_eigenvalue) * sigma;
-    sigma_components.y = mean_delta_position_(1) +
-        max_eigenvector(1) * sqrt(max_eigenvalue) * sigma;
-    sigma_components.z = mean_delta_position_(2) +
-        max_eigenvector(2) * sqrt(max_eigenvalue) * sigma;
+    sigma_components.x = mean_delta_position_(0) + max_eigenvector(0) * sqrt(max_eigenvalue) * num_sigmas;
+    sigma_components.y = mean_delta_position_(1) + max_eigenvector(1) * sqrt(max_eigenvalue) * num_sigmas;
+    sigma_components.z = mean_delta_position_(2) + max_eigenvector(2) * sqrt(max_eigenvalue) * num_sigmas;
 
-		double sigma_score = computeScore(sigma_components);
+    const double sigma_score = computeScore(sigma_components);
 
+    // We set this value to be the minimum probability returned by the
+    // motion model.
 		min_score_ = sigma_score;
 	}
 }
 
-void MotionModel::addTransformsWeightedGaussian(
-    const ScoredTransforms<ScoredTransformXYZ>& transforms,
-		const double& recorded_time_diff) {
-	const double time_diff = max(0.01, recorded_time_diff);
 
-  mean_velocity_ = computeMeanVelocity(transforms, time_diff);
 
-  mean_delta_position_ = mean_velocity_ * recorded_time_diff;
-
-  computeCovarianceVelocity(transforms, time_diff, mean_velocity_, covariance_velocity_);
-
-	covariance_delta_position_ = covariance_velocity_ * pow(time_diff, 2);
-
-  // The motion model is now valid.
-  valid_ = true;
-}
-
-MotionModel::MotionModel()
-	:pdf_constant_(1),
-	 min_score_(1e-4),
-   valid_eigen_vectors_(false),
-	 valid_(false)
-{
-	//R_t in the kalman filter - the amount of uncertainty propagation in 0.1 s
-	covariance_propagation_uncertainty_ = Eigen::Matrix3d::Zero();
-  covariance_propagation_uncertainty_(0,0) = kPropagationVarianceXY;
-  covariance_propagation_uncertainty_(1,1) = kPropagationVarianceXY;
-  covariance_propagation_uncertainty_(2,2) = kPropagationVarianceZ;
-
-	//used for centroid kalman filter
-	covariance_velocity_ = 100 * Eigen::Matrix3d::Identity();
-	//covariance_velocity_(2,2) = z_variance;
-  mean_velocity_ = Eigen::Vector3d::Zero();
-}
-
-MotionModel::~MotionModel() {
-	// TODO Auto-generated destructor stub
-}
 

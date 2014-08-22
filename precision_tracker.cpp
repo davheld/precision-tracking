@@ -48,51 +48,7 @@ const double kInitialZSamplingResolution = 0;
 
 const double pi = boost::math::constants::pi<double>();
 
-
 using std::pair;
-
-Eigen::Matrix4f makeRotationMatrix(const double& roll, const double& pitch, const double& yaw){
-  Eigen::Matrix4f shift = Eigen::Matrix4f::Identity();
-
-  //http://planning.cs.uiuc.edu/node102.html
-  shift(0,0) = cos(yaw)*cos(pitch);
-  shift(0,1) = cos(yaw)*sin(pitch)*sin(roll) - sin(yaw)*cos(roll);
-  shift(0,2) = cos(yaw)*sin(pitch)*cos(roll) + sin(yaw)*sin(roll);
-
-  shift(1,0) = sin(yaw)*cos(pitch);
-  shift(1,1) = sin(yaw)*sin(pitch)*sin(roll) + cos(yaw)*cos(roll);
-  shift(1,2) = sin(yaw)*sin(pitch)*cos(roll) - cos(yaw)*sin(roll);
-
-  shift(2,0) = -sin(pitch);
-  shift(2,1) = cos(pitch)*sin(roll);
-  shift(2,2) = cos(pitch)*cos(roll);
-
-  return shift;
-}
-
-Eigen::Matrix4f makeTranslationMatrix(const double& x, const double& y, const double& z){
-  Eigen::Matrix4f translationMatrix = Eigen::Matrix4f::Identity();
-
-  translationMatrix(0,3) = x;
-  translationMatrix(1,3) = y;
-  translationMatrix(2,3) = z;
-
-  return translationMatrix;
-}
-
-Eigen::Matrix4f makeTransformationMatrix(const double& x, const double& y, const double& z,
-    const double& roll, const double& pitch, const double& yaw,
-    const Eigen::Vector3f& centroid){
-
-  Eigen::Matrix4f centerMatrix = makeTranslationMatrix(-centroid(0), -centroid(1), -centroid(2));
-  Eigen::Matrix4f rotationMatrix = makeRotationMatrix(roll, pitch, yaw);
-  Eigen::Matrix4f uncenterMatrix = makeTranslationMatrix(centroid(0), centroid(1), centroid(2));
-  Eigen::Matrix4f translationMatrix = makeTranslationMatrix(x, y, z);
-
-  Eigen::Matrix4f transformationMatrix = translationMatrix*uncenterMatrix*rotationMatrix*centerMatrix;
-
-  return transformationMatrix;
-}
 
 } // namespace
 
