@@ -9,14 +9,6 @@
 
 #include <pcl/common/centroid.h>
 
-namespace{
-
-const bool kUseMode = false;
-
-const bool useCentroid = false;
-
-}  // namespace
-
 Tracker::Tracker()
     : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
       prev_timestamp_(-1),
@@ -25,6 +17,11 @@ Tracker::Tracker()
       use_mean_(true)
 {
   motion_model_.reset(new MotionModel);
+
+  if (use_precision_tracker_) {
+    precision_tracker_.reset(new PrecisionTracker);
+  }
+
 }
 
 Tracker::Tracker(const bool use_precision_tracker,
@@ -37,6 +34,10 @@ Tracker::Tracker(const bool use_precision_tracker,
       use_mean_(use_mean)
 {
   motion_model_.reset(new MotionModel);
+
+  if (use_precision_tracker_) {
+    precision_tracker_.reset(new PrecisionTracker);
+  }
 }
 
 
@@ -75,8 +76,28 @@ void Tracker::addPoints(
     const double horizontal_distance =
         sqrt(pow(centroid(0), 2) + pow(centroid(1), 2));
 
-    if (useCentroid) {
+    if (use_precision_tracker_) {
+      // Align.
+      ScoredTransforms<ScoredTransformXYZ> scored_transforms;
+      precision_tracker_->track(current_points, previousModel_,
+          horizontal_distance, *motion_model_, &scored_transforms);
 
+      motion_model_->addTransformsWeightedGaussian(scored_transforms,
+                                                  timestamp_diff);
+      if (use_mean_) {
+        Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
+        *estimated_velocity = mean_velocity;
+      } else {
+        ScoredTransformXYZ best_transform;
+        scored_transforms.findBest(&best_transform);
+
+        Eigen::Vector3f best_displacement;
+        best_transform.getEigen(&best_displacement);
+
+        *estimated_velocity = best_displacement / timestamp_diff;
+      }
+    } else {
+      // Track using the centroid-based Kalman filter.
       Eigen::Vector4f new_centroid;
       pcl::compute3DCentroid (*current_points, new_centroid);
 
@@ -89,27 +110,6 @@ void Tracker::addPoints(
 
       Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
       *estimated_velocity = mean_velocity;
-    }
-    else {
-      // Align.
-      ScoredTransforms<ScoredTransformXYZ> scored_transforms;
-      precision_tracker_.track(current_points, previousModel_,
-          horizontal_distance, *motion_model_, &scored_transforms);
-
-      motion_model_->addTransformsWeightedGaussian(scored_transforms,
-                                                  timestamp_diff);
-      if (kUseMode) {
-        ScoredTransformXYZ best_transform;
-        scored_transforms.findBest(&best_transform);
-
-        Eigen::Vector3f best_displacement;
-        best_transform.getEigen(&best_displacement);
-
-        *estimated_velocity = best_displacement / timestamp_diff;
-      } else {
-        Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
-        *estimated_velocity = mean_velocity;
-      }
     }
   }
 

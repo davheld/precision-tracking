@@ -40,10 +40,10 @@ private:
   double prev_timestamp_;
 
   boost::shared_ptr<MotionModel> motion_model_;
-  PrecisionTracker precision_tracker_;
+  boost::shared_ptr<PrecisionTracker> precision_tracker_;
 
-  // Whether to use the precision tracker (accurate) or the centroid-based
-  // Kalman filter (fast but not accurate).
+  // Whether to use our precision tracker (accurate) or the centroid-based
+  // Kalman filter baseline (fast but not accurate).
   bool use_precision_tracker_;
 
   // Whether to use color - note that using color will make the tracker

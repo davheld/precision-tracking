@@ -273,6 +273,36 @@ void trackAndEvaluate(
   evaluateTracking(velocity_estimates, gt_folder, filter);
 }
 
+void testKalman(const track_manager_color::TrackManagerColor& track_manager,
+                const string gt_folder) {
+  printf("Tracking objects with the centroid-based Kalman filter baseline - please wait...\n");
+  const bool use_precision_tracker = false;
+  const bool use_color = false;
+  const bool use_mean = true;
+  Tracker centroid_tracker(use_precision_tracker, use_color, use_mean);
+  trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
+}
+
+void testPrecisionTracker(const track_manager_color::TrackManagerColor& track_manager,
+                          const string gt_folder) {
+  printf("\nTracking objects with our precision tracker - please wait...\n");
+  const bool use_precision_tracker = true;
+  const bool use_color = false;
+  const bool use_mean = true;
+  Tracker precision_tracker(use_precision_tracker, use_color, use_mean);
+  trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
+}
+
+void testPrecisionTrackerColor(const track_manager_color::TrackManagerColor& track_manager,
+                               const string gt_folder) {
+  printf("\nTracking objects with our precision tracker and color - please wait (will be slow)...\n");
+  const bool use_precision_tracker = true;
+  const bool use_color = true;
+  const bool use_mean = true;
+  Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean);
+  trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
+}
+
 int main(int argc, char **argv)
 {
   if (argc < 3) {
@@ -291,26 +321,16 @@ int main(int argc, char **argv)
   // Track objects and evaluate the accuracy.
   printf("Tracking objects - please wait...\n\n");
 
-  printf("Tracking objects with the centroid-based Kalman filter baseline - please wait...\n\n");
-  bool use_precision_tracker = false;
-  bool use_color = false;
-  bool use_mean = true;
-  Tracker centroid_tracker(use_precision_tracker, use_color, use_mean);
-  trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
+  // Testing the centroid-based Kalman filter baseline method - should be
+  // very fast but not very accurate.
+  testKalman(track_manager, gt_folder);
 
-  printf("Tracking objects with the precision tracker - please wait...\n\n");
-  use_precision_tracker = true;
-  use_color = false;
-  use_mean = true;
-  Tracker precision_tracker(use_precision_tracker, use_color, use_mean);
-  trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
+  // Testing our precision tracker - should be very accurate and quite fast.
+  testPrecisionTracker(track_manager, gt_folder);
 
-  printf("Tracking objects with the precision tracker and color - please wait (will be slow)...\n\n");
-  use_precision_tracker = true;
-  use_color = true;
-  use_mean = true;
-  Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean);
-  trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
+  // Testing our precision tracker with color - should be even more accurate
+  // but slow.
+  testPrecisionTrackerColor(track_manager, gt_folder);
 
   return 0;
 }
