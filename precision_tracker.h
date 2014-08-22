@@ -14,6 +14,7 @@
 #include "scored_transform.h"
 #include "motion_model.h"
 #include "adh_tracker3d.h"
+#include "down_sampler.h"
 
 class PrecisionTracker {
 public:
@@ -30,28 +31,21 @@ public:
   static void computeCentroid(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
       Eigen::Vector3f* centroid);
-
-  static Eigen::Matrix4f estimateAlignmentCentroidDiff(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& interpolatedColoredPointsPtr,
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModelPtr);
-
-private:
-  void track(
+private:  
+  void estimateRange(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
-      const double max_xy_stepSize,
-      const double max_z_stepSize,
-      std::pair <double, double> xRange,
-      std::pair <double, double> yRange,
-      std::pair <double, double> zRange,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-      const Eigen::Vector3f &current_points_centroid,
-      const MotionModel& motion_model,
-      const double down_sample_factor_prev,
-      const double horizontal_distance,
-      ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
+      std::pair <double, double>* xRange,
+      std::pair <double, double>* yRange,
+      std::pair <double, double>* zRange) const;
+
+  Eigen::Matrix4f estimateAlignmentCentroidDiff(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& curr_points,
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points) const;
 
   ADHTracker3d adh_tracker3d_;
   boost::shared_ptr<AlignmentEvaluator> alignment_evaluator_;
+  DownSampler down_sampler_;
 };
 
 #endif /* PRECISION_TRACKER_H_ */

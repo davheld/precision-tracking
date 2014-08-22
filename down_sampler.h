@@ -13,8 +13,13 @@
 
 class DownSampler {
 public:
-  DownSampler();
+  DownSampler(const bool stochastic);
   virtual ~DownSampler();
+
+  void downSamplePoints(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
+      const int target_num_points,
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) const;
 
   // Randomly samples points from the input cloud to try to get the output
   // to have as close as possible to targetNumPoints points.
@@ -29,6 +34,9 @@ public:
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
       const int targetNumPoints,
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints);
+
+private:
+  bool stochastic_;
 };
 
 #endif /* DOWN_SAMPLER_H_ */

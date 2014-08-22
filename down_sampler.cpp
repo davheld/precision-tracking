@@ -15,51 +15,63 @@ const bool kUseCeil = true;
 
 } // namespace
 
-DownSampler::DownSampler() {
-  // TODO Auto-generated constructor stub
-
+DownSampler::DownSampler(const bool stochastic)
+  : stochastic_(stochastic)
+{
 }
 
 DownSampler::~DownSampler() {
   // TODO Auto-generated destructor stub
 }
 
+void DownSampler::downSamplePoints(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
+    const int target_num_points,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) const {
+  if (stochastic_) {
+    downSamplePointsStochastic(points, target_num_points, down_sampled_points);
+  } else {
+    downSamplePointsDeterministic(points, target_num_points, down_sampled_points);
+  }
+}
+
+
 void DownSampler::downSamplePointsStochastic(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
-    const int targetNumPoints,
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints) {
+    const int target_num_points,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) {
   const size_t num_points = points->size();
 
   // Check if the points are already sufficiently down-sampled.
-  if (targetNumPoints >= num_points * 0.8){
-    *downSampledPoints = *points;
+  if (target_num_points >= num_points * 0.8){
+    *down_sampled_points = *points;
     return;
   }
 
   // Allocate space for the new points.
-  downSampledPoints->reserve(targetNumPoints);
+  down_sampled_points->reserve(target_num_points);
 
   //Just to ensure that we don't end up with 0 points, add 1 point to this
-  downSampledPoints->push_back((*points)[0]);
+  down_sampled_points->push_back((*points)[0]);
 
   // Randomly select points with (targetNumPoints / num_points) probability.
   for (size_t i = 1; i < num_points; ++i){
     const pcl::PointXYZRGB& pt = (*points)[i];
-    if (rand() % num_points < targetNumPoints){
-      downSampledPoints->push_back(pt);
+    if (rand() % num_points < target_num_points){
+      down_sampled_points->push_back(pt);
     }
   }
 }
 
 void DownSampler::downSamplePointsDeterministic(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
-    const int targetNumPoints,
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints) {
+    const int target_num_points,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) {
   const size_t num_points = points->size();
 
   // Check if the points are already sufficiently down-sampled.
-  if (targetNumPoints >= num_points * 0.8){
-    *downSampledPoints = *points;
+  if (target_num_points >= num_points * 0.8){
+    *down_sampled_points = *points;
     return;
   }
 
@@ -67,23 +79,23 @@ void DownSampler::downSamplePointsDeterministic(
   int everyN = 0;
   if (kUseCeil) {
     everyN = ceil(static_cast<double>(num_points) /
-                  static_cast<double>(targetNumPoints));
+                  static_cast<double>(target_num_points));
   } else {
     everyN = static_cast<double>(num_points) /
-        static_cast<double>(targetNumPoints);
+        static_cast<double>(target_num_points);
   }
 
   // Allocate space for the new points.
-  downSampledPoints->reserve(targetNumPoints);
+  down_sampled_points->reserve(target_num_points);
 
   //Just to ensure that we don't end up with 0 points, add 1 point to this
-  downSampledPoints->push_back((*points)[0]);
+  down_sampled_points->push_back((*points)[0]);
 
   // Select every N points to reach the target number of points.
   for (size_t i = 1; i < num_points; ++i) {
     if (i % everyN == 0){
       const pcl::PointXYZRGB& pt = (*points)[i];
-      downSampledPoints->push_back(pt);
+      down_sampled_points->push_back(pt);
     }
   }
 }
