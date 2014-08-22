@@ -22,9 +22,9 @@ const double kPropagationVarianceZ = 0.1;
 const double kCentroidMeasurementVariance = 0.4;
 
 
-bool MotionModel::computeCovarianceVelocity(
+void MotionModel::computeCovarianceVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
-    const double& time_diff,
+    const double time_diff,
     const Eigen::Vector3d& mean_velocity,
     Eigen::Matrix3d& covariance_velocity) const {
 
@@ -32,32 +32,32 @@ bool MotionModel::computeCovarianceVelocity(
   double y_velocity_mean = mean_velocity(1);
   double z_velocity_mean = mean_velocity(2);
 
+  // Initialize the covariance velocity to zero.
   covariance_velocity = Eigen::Matrix3d::Zero();
 
   const std::vector<ScoredTransformXYZ>& scored_transforms =
       transforms.getScoredTransforms();
-
   const std::vector<double>& probs = transforms.getNormalizedProbs();
 
-  // Compute half of the covariance matrix.
+  // Compute the upper-right half of the covariance matrix.
   const size_t num_transforms = scored_transforms.size();
   for (size_t i = 0; i < num_transforms; ++i) {
     const ScoredTransformXYZ& scored_transform = scored_transforms[i];
 
-    const double& prob = probs[i];
+    const double prob = probs[i];
 
-    if (prob > 0) {
-      const double x_velo_diff = (scored_transform.getX() / time_diff) - x_velocity_mean;
-      const double y_velo_diff = (scored_transform.getY() / time_diff) - y_velocity_mean;
-      const double z_velo_diff = (scored_transform.getZ() / time_diff) - z_velocity_mean;
+    // Compute the difference from the mean.
+    const double x_velo_diff = (scored_transform.getX() / time_diff) - x_velocity_mean;
+    const double y_velo_diff = (scored_transform.getY() / time_diff) - y_velocity_mean;
+    const double z_velo_diff = (scored_transform.getZ() / time_diff) - z_velocity_mean;
 
-      covariance_velocity(0,0) += prob * pow(x_velo_diff, 2);
-      covariance_velocity(1,1) += prob * pow(y_velo_diff, 2);
-      covariance_velocity(2,2) += prob * pow(z_velo_diff, 2);
-      covariance_velocity(0,1) += prob * x_velo_diff * y_velo_diff;
-      covariance_velocity(0,2) += prob * x_velo_diff * z_velo_diff;
-      covariance_velocity(1,2) += prob * y_velo_diff * z_velo_diff;
-    }
+    // Compute the weighted contribution to the covaraince.
+    covariance_velocity(0,0) += prob * pow(x_velo_diff, 2);
+    covariance_velocity(1,1) += prob * pow(y_velo_diff, 2);
+    covariance_velocity(2,2) += prob * pow(z_velo_diff, 2);
+    covariance_velocity(0,1) += prob * x_velo_diff * y_velo_diff;
+    covariance_velocity(0,2) += prob * x_velo_diff * z_velo_diff;
+    covariance_velocity(1,2) += prob * y_velo_diff * z_velo_diff;
   }
 
   // Fill in the rest of the covariance matrix by symmetry.
@@ -66,15 +66,13 @@ bool MotionModel::computeCovarianceVelocity(
       covariance_velocity(j,i) = covariance_velocity(i,j);
     }
   }
-  return true;
 }
 
 Eigen::Vector3d MotionModel::computeMeanVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms_orig,
-    const double& time_diff) const {
-
-  // Keep track of the mean velocity for each parameter.
-  TransformComponents mean_velocity_components;
+    const double time_diff) const {
+  // Compute the mean delta position.
+  TransformComponents mean_delta_position;
 
   ScoredTransforms<ScoredTransformXYZ> transforms = transforms_orig;
 
@@ -82,7 +80,6 @@ Eigen::Vector3d MotionModel::computeMeanVelocity(
   const std::vector<ScoredTransformXYZ>& scored_transforms =
       transforms.getScoredTransforms();
 
-  //const std::vector<double>& normalized_probs = transforms.getNormalizedProbsApprox();
   const std::vector<double>& normalized_probs =
       transforms.getNormalizedProbs();
 
@@ -93,28 +90,26 @@ Eigen::Vector3d MotionModel::computeMeanVelocity(
 
   // Compute the mean components.
   for (size_t i = 0; i < num_transforms; ++i){
-    const double& prob = normalized_probs[i];
+    const double prob = normalized_probs[i];
 
-    if (prob > 0) {
+    const ScoredTransformXYZ& scored_transform = scored_transforms[i];
 
-      const ScoredTransformXYZ& scored_transform = scored_transforms[i];
+    prob_sum += prob;
 
-      prob_sum += prob;
-
-      mean_velocity_components.x += scored_transform.getX() * prob;
-      mean_velocity_components.y += scored_transform.getY() * prob;
-      mean_velocity_components.z += scored_transform.getZ() * prob;
-    }
+    mean_delta_position.x += scored_transform.getX() * prob;
+    mean_delta_position.y += scored_transform.getY() * prob;
+    mean_delta_position.z += scored_transform.getZ() * prob;
   }
 
-  const double mean_velocity_x = mean_velocity_components.x / (time_diff * prob_sum);
-  const double mean_velocity_y = mean_velocity_components.y / (time_diff * prob_sum);
-  const double mean_velocity_z = mean_velocity_components.z / (time_diff * prob_sum);
+  // Normalize, and divide by time to get the velocity.
+  const double mean_velocity_x = mean_delta_position.x / (time_diff * prob_sum);
+  const double mean_velocity_y = mean_delta_position.y / (time_diff * prob_sum);
+  const double mean_velocity_z = mean_delta_position.z / (time_diff * prob_sum);
 
-  const Eigen::Vector3d mean_velocity(mean_velocity_x, mean_velocity_y, mean_velocity_z);
+  const Eigen::Vector3d mean_velocity(
+        mean_velocity_x, mean_velocity_y, mean_velocity_z);
 
   return mean_velocity;
-
 }
 
 double MotionModel::computeScore(const double x, const double y,
@@ -256,15 +251,12 @@ void MotionModel::addTransformsWeightedGaussian(
 
   mean_delta_position_ = mean_velocity_ * recorded_time_diff;
 
-  bool computed_covariance = computeCovarianceVelocity(transforms, time_diff, mean_velocity_, covariance_velocity_);
+  computeCovarianceVelocity(transforms, time_diff, mean_velocity_, covariance_velocity_);
 
 	covariance_delta_position_ = covariance_velocity_ * pow(time_diff, 2);
 
-	valid_ = computed_covariance;
-
-	if (!valid_){
-		printf("Motion model is not valid\n");
-	}
+  // The motion model is now valid.
+  valid_ = true;
 }
 
 MotionModel::MotionModel()

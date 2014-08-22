@@ -68,11 +68,11 @@ public:
 private:
   Eigen::Vector3d computeMeanVelocity(
       const ScoredTransforms<ScoredTransformXYZ>& transforms,
-      const double& time_diff) const;
+      const double time_diff) const;
 
-  bool computeCovarianceVelocity(
+  void computeCovarianceVelocity(
       const ScoredTransforms<ScoredTransformXYZ>& transforms,
-      const double& time_diff,
+      const double time_diff,
       const Eigen::Vector3d& mean_velocity,
       Eigen::Matrix3d& covariance_velocity) const;
 
