@@ -17,7 +17,7 @@
 namespace {
 
 // Whether to include color probabilities when performing the alignment.
-const bool use_color = false;
+const bool use_color = true;
 
 // We downsample the current frame of the tracked object to have this many
 // points.
@@ -55,7 +55,7 @@ using std::max;
 } // namespace
 
 PrecisionTracker::PrecisionTracker()
-  : down_sampler_(false)
+  : down_sampler_(stochastic_downsample)
 {
   if (use_color) {
     alignment_evaluator_.reset(new LF_RGBD_6D);

@@ -59,7 +59,7 @@ const double kProbColorMatch = 0.05;
 // Set to 0 to ignore this term.
 // If non-zero, we set prob_color_match_ = kProbColorMatch *
 //    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
-const double kColorThreshFactor = 10;
+const double kColorThreshFactor = 1;
 
 // Which color space to use for our color matches.
 // 0: Use blue and green,
