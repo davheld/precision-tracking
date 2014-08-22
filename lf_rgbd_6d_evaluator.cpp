@@ -1,5 +1,5 @@
 /*
- * lf_rgbd_6d.cpp
+ * lf_rgbd_6d_evaluator.cpp
  *
  * Created on: August 6, 2014
  *      Author: davheld

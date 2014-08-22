@@ -1,12 +1,12 @@
 /*
- * aligner.h
+ * tracker.h
  *
  *  Created on: Nov 20, 2011
  *      Author: davheld
  */
 
-#ifndef MOVING_SYNCHRONIZER_MODEL_BUILDER_H_
-#define MOVING_SYNCHRONIZER_MODEL_BUILDER_H_
+#ifndef TRACKER_H_
+#define TRACKER_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -39,4 +39,4 @@ private:
 };
 
 
-#endif /* MOVING_SYNCHRONIZER_MODEL_BUILDER_H_ */
+#endif /* TRACKER_H_ */

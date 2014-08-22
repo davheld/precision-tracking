@@ -1,5 +1,5 @@
 /*
- * aligner.cpp
+ * tracker.cpp
  *
  *  Created on: Nov 20, 2011
  *      Author: davheld

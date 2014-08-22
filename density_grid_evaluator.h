@@ -1,5 +1,5 @@
 /*
- * density_grid_tracker.h
+ * density_grid_evaluator.h
  *
  *  Created on: Sep 1, 2013
  *      Author: davheld
@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef DENSITY_GRID_TRACKER_H_
-#define DENSITY_GRID_TRACKER_H_
+#ifndef DENSITY_GRID_EVALUATOR_H_
+#define DENSITY_GRID_EVALUATOR_H_
 
 #include <vector>
 
@@ -83,5 +83,5 @@ private:
   int num_spillover_steps_z_;
 };
 
-#endif /* DENSITY_GRID_TRACKER_H_ */
+#endif /* DENSITY_GRID_EVALUATOR_H_ */
 

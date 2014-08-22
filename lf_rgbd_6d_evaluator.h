@@ -12,8 +12,8 @@
  * Held, et al.
  */
 
-#ifndef LF_RGBD_6D_H_
-#define LF_RGBD_6D_H_
+#ifndef LF_RGBD_6D_EVALUATOR_H_
+#define LF_RGBD_6D_EVALUATOR_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -124,4 +124,4 @@ private:
   double prob_color_match_;
 };
 
-#endif /* LF_RGBD_6D_H_ */
+#endif /* LF_RGBD_6D_EVALUATOR_H_ */

@@ -1,12 +1,12 @@
 /*
- * ScoredTransform.h
+ * scored_transform.h
  *
  *  Created on: Sep 17, 2013
  *      Author: davheld
  */
 
-#ifndef SCOREDTRANSFORM_H_
-#define SCOREDTRANSFORM_H_
+#ifndef SCORED_TRANSFORM_H_
+#define SCORED_TRANSFORM_H_
 
 #include <cstdio>
 #include <vector>
@@ -283,7 +283,7 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
     normalized_probs.push_back(prob);
   }
 
-  // Normalize - for details see
+  // Compute the normalization constant - for details see
   // http://stackoverflow.com/questions/10330002/sum-of-small-double-numbers-c
   const KahanAccumulation init = {0};
   const KahanAccumulation result =
@@ -314,4 +314,4 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
 }
 
 
-#endif /* SCOREDTRANSFORM_H_ */
+#endif /* SCORED_TRANSFORM_H_ */
