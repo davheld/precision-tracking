@@ -34,3 +34,13 @@ bool compareTransforms(const ScoredTransform& transform_i,
       log(transform_j.getVolume());
   return score_i > score_j;
 }
+
+KahanAccumulation KahanSum(KahanAccumulation accumulation, double value)
+{
+    KahanAccumulation result;
+    double y = value - accumulation.correction;
+    double t = accumulation.sum + y;
+    result.correction = (t - accumulation.sum) - y;
+    result.sum = t;
+    return result;
+}

@@ -10,6 +10,7 @@
 
 #include <cstdio>
 #include <vector>
+#include <numeric>
 
 #include <Eigen/Eigen>
 
@@ -247,6 +248,13 @@ void ScoredTransforms<TransformType>::findBest(
   *best_transform = scored_transforms_[best_transform_index];
 }
 
+struct KahanAccumulation
+{
+    double sum;
+    double correction;
+};
+
+KahanAccumulation KahanSum(KahanAccumulation accumulation, double value);
 
 template <class TransformType>
 const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() const {
@@ -267,28 +275,25 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
   const double max_log_prob = *std::max_element(
       log_probabilities.begin(), log_probabilities.end());
 
-  // Find the value such that max_log_prob + n_factor * log(10) = max_x.
-  // This is equivalent to: prob * 10 ^ n_factor = max_x.
-  const double max_x = 0;
-  const double n_factor = (max_x - max_log_prob) / log(10);
-
-  // Multiply all probabilities by 10 ^ n_factor, and then find the
-  // (not log) probability.
+  // Subtract the max to bring the highest probabilities up to a reasonable
+  // level, to avoid issues of numerical instability.  Then convert
+  // from log prob to prob.
   for (size_t i = 0; i < num_transforms; ++i) {
-    const double prob = exp(log_probabilities[i] + n_factor * log(10));
+    const double prob = exp(log_probabilities[i] - max_log_prob);
     normalized_probs.push_back(prob);
   }
 
-  // Normalize.
-  //const double sum_prob =
-//      std::accumulate(probabilities->begin(), probabilities->end(), 0);
-  double sum_prob2 = 0;
-  for (size_t i = 0; i < num_transforms; ++i) {
-    sum_prob2 += normalized_probs[i];
-  }
+  // Normalize - for details see
+  // http://stackoverflow.com/questions/10330002/sum-of-small-double-numbers-c
+  const KahanAccumulation init = {0};
+  const KahanAccumulation result =
+      std::accumulate(normalized_probs.begin(), normalized_probs.end(), init,
+                      KahanSum);
+  const double sum_prob = result.sum;
 
   // Verfify that something bad didn't happen.
-  if (sum_prob2 == 0) {
+  if (sum_prob == 0) {
+    // Something bad happened - print lots of info and quit.
     printf("Log probs:\n");
     for (size_t i = 0; i < num_transforms; ++i) {
       printf("%lf\n", log_probabilities[i]);
@@ -302,7 +307,7 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
 
   // Normalize the probabilities.
   for (size_t i = 0; i < num_transforms; ++i) {
-    normalized_probs[i] /= sum_prob2;
+    normalized_probs[i] /= sum_prob;
   }
 
   return normalized_probs;
