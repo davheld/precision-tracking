@@ -6,7 +6,10 @@
  *
  * Compute the probability of a given set of alignments.
  * To do this quickly, we pre-cache probability values in a density grid for
- * fast lookups.
+ * fast lookups.  Because of the caching in the grid-structure, this
+ * evaluator works best for translations only (no rotations) and does
+ * not make use of color information.  If rotations or color are required,
+ * use a different evaluator class.
  *
  */
 

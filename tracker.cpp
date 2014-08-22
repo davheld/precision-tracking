@@ -5,7 +5,7 @@
  *      Author: davheld
  */
 
-#include "model_builder.h"
+#include "tracker.h"
 
 namespace{
 
@@ -15,23 +15,23 @@ const bool useCentroid = false;
 
 }  // namespace
 
-ModelBuilder::ModelBuilder()
+Tracker::Tracker()
     : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
       prev_timestamp_(-1)
 {
   motion_model_.reset(new MotionModel);
 }
 
-ModelBuilder::~ModelBuilder() {
+Tracker::~Tracker() {
   // TODO Auto-generated destructor stub
 }
 
-void ModelBuilder::clear(){
+void Tracker::clear(){
   motion_model_.reset(new MotionModel);
   previousModel_->clear();
 }
 
-void ModelBuilder::addPoints(
+void Tracker::addPoints(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const double current_timestamp,
     const Eigen::Vector3f& centroid,

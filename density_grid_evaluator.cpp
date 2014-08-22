@@ -12,8 +12,6 @@
 
 #include <pcl/common/common.h>
 
-#include "model_builder.h"
-
 namespace {
 
 // How far to spill over in the density grid (number of sigmas).

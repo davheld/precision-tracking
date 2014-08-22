@@ -14,10 +14,10 @@
 #include "motion_model.h"
 #include "precision_tracker.h"
 
-class ModelBuilder {
+class Tracker {
 public:
-  ModelBuilder();
-  virtual ~ModelBuilder();
+  Tracker();
+  virtual ~Tracker();
 
   void clear();
 

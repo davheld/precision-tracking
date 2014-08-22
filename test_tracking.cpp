@@ -9,7 +9,7 @@
 #include <cstdio>
 
 #include "track_manager_color.h"
-#include "model_builder.h"
+#include "tracker.h"
 #include "high_res_timer.h"
 
 using std::string;
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
   printf("Found %zu tracks\n", tracks.size());
 
   // Structure for tracking.
-  ModelBuilder aligner;
+  Tracker aligner;
 
   printf("Tracking objects - please wait...\n\n");
 
