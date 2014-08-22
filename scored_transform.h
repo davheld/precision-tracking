@@ -12,13 +12,6 @@
 #include <vector>
 
 #include <Eigen/Eigen>
-#include "fast_functions.h"
-
-namespace {
-
-FastFunctions& fast_functions1_ = FastFunctions::getInstance();
-
-} //namespace
 
 // A pure translation.
 struct XYZTransform {
