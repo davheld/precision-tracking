@@ -299,7 +299,7 @@ void testPrecisionTracker(
 void testPrecisionTrackerColor(
     const track_manager_color::TrackManagerColor& track_manager,
     const string gt_folder) {
-  printf("\nTracking objects with our precision tracker and color. "
+  printf("\nTracking objects with our precision tracker using color. "
          "This method is a bit more accurate but much slower. Please wait (will be slow)...\n");
   const bool use_precision_tracker = true;
   const bool use_color = true;

@@ -11,7 +11,7 @@
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 
-#define POINTCLOUD_SERIALIZATION_VERSION 0
+#define POINTCLOUD_SERIALIZATION_VERSION 1
 #define TRACK_SERIALIZATION_VERSION 2
 #define TRACKMANAGER_SERIALIZATION_VERSION 2
 #define FRAME_SERIALIZATION_VERSION 0
@@ -22,11 +22,10 @@ namespace track_manager_color {
   public:
     int serialization_version_;
 
-    // Points for the object observed in a single frame.
-    //! Assumed to be stored in local coordinates!
+    // Points for the object observed in a single frame, in local coordinates.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_;
 
-    // Time that this cloud was observed.
+    // Time that this object was observed.
     double timestamp_;
 
     Frame(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double timestamp);
@@ -37,7 +36,6 @@ namespace track_manager_color {
     //! Returns false if there were no points.
     bool operator!=(const Frame& fr);
     bool operator==(const Frame& fr);
-    void getVelodyneXYZ(double* x, double* y, double* z) const;
     Eigen::Vector3f getCentroid();
     Eigen::MatrixXf getBoundingBox();
     double getDistance();
@@ -70,10 +68,6 @@ namespace track_manager_color {
     bool operator!=(const Track& tr);
     void serialize(std::ostream& out) const;
     bool deserialize(std::istream& istrm);
-    //! Returns false if timestamp < timestamps_.front() || timestamp > timestamps_.back(), otherwise fills *idx with the index of the cloud with the nearest timestamp.
-    bool seek(double timestamp, double max_time_difference, size_t* idx);
-    //! Like seek, returns false if timestamp < timestamps_.front() || timestamp > timestamps_.back().  Otherwise, fills *idx with the index of the cloud with nearest timestamp less than timestamp, and fills *interpolation with a value in [0, 1] indicating how much to weight cloud *idx+1 vs cloud *idx.
-    bool interpolatedSeek(double timestamp, double max_time_difference, size_t* idx, double* interpolation);
     double getMeanNumPoints() const;
     double getMeanDistance();
   };
@@ -100,10 +94,6 @@ namespace track_manager_color {
     void sortTracks(const std::vector<double>& track_ratings);
     void insertTrack(boost::shared_ptr<Track> track);
     void reserve(size_t size);
-    void getFramesNear(double timestamp, double tol,
-		       std::vector< boost::shared_ptr<Frame> >* frames,
-		       std::vector<std::string>* class_names,
-		       std::vector<int>* track_ids) const;
     
     TrackManagerColor();
     TrackManagerColor(const std::string& filename, const int tracknum);
@@ -113,13 +103,15 @@ namespace track_manager_color {
   };
 
   bool checkLine(std::istream& istrm, const std::string& expected_input);
-  void  deserializePointCloud(std::istream& istrm,
+  bool readCloud(std::istream& s, pcl::PCLPointCloud2 &cloud);
+  void deserializePointCloud(std::istream& istrm,
       pcl::PointCloud<pcl::PointXYZRGB>& point_cloud);
+  inline std::ostream& writeCloud(std::ostream& s,
+                                  const pcl::PCLPointCloud2& cloud);
   void serializePointCloud(
-      const pcl::PointCloud<pcl::PointXYZRGB> point_cloud, std::ostream& out);
+      const pcl::PointCloud<pcl::PointXYZRGB> cloud, std::ostream& out);
   bool cloudsEqual(const pcl::PointCloud<pcl::PointXYZRGB>& c1,
-      const pcl::PointCloud<pcl::PointXYZRGB>& c2);
-  bool streamTrack(std::string track_manager_filename, const Track& tr); 
+        const pcl::PointCloud<pcl::PointXYZRGB>& c2);
   double getTrackLength(const Track& tr);
   bool floatEq(float x, float y, int maxUlps = 5);
 }
