@@ -19,10 +19,26 @@ const bool useCentroid = false;
 
 Tracker::Tracker()
     : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
-      prev_timestamp_(-1)
+      prev_timestamp_(-1),
+      use_precision_tracker_(true),
+      use_color_(false),
+      use_mean_(true)
 {
   motion_model_.reset(new MotionModel);
 }
+
+Tracker::Tracker(const bool use_precision_tracker,
+                 const bool use_color,
+                 const bool use_mean)
+    : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
+      prev_timestamp_(-1),
+      use_precision_tracker_(use_precision_tracker),
+      use_color_(use_color),
+      use_mean_(use_mean)
+{
+  motion_model_.reset(new MotionModel);
+}
+
 
 Tracker::~Tracker() {
   // TODO Auto-generated destructor stub

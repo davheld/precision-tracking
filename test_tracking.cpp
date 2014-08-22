@@ -14,6 +14,7 @@
 
 using std::string;
 
+// Structure for storing estimated velocities for each track.
 struct TrackResults {
   int track_num;
   std::vector<Eigen::Vector3f> estimated_velocities;
@@ -27,8 +28,6 @@ void getGTVelocities(const string& gt_folder, const int track_num,
   std::ostringstream filename_stream;
   filename_stream << gt_folder << "/track" << track_num << "gt.txt";
   filename = filename_stream.str();
-
-  //printf("Loading file: %s\n", filename.c_str());
 
   FILE* fid = fopen(filename.c_str(), "r");
 
@@ -49,8 +48,6 @@ void computeErrorStatistics(const std::vector<double>& errors) {
   double sum_sq = 0;
 
   size_t num_frames = errors.size();
-
-  //printf("Computing error statistics over %zu frames\n", num_frames);
 
   for (size_t i = 0; i < num_frames; ++i) {
     sum_sq += pow(errors[i], 2);
@@ -74,7 +71,6 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
     TrackResults track_results = velocity_estimates[i];
 
     int track_num = track_results.track_num;
-    //printf("Track num: %d\n", track_num);
 
     std::vector<double> gt_velocities;
     getGTVelocities(gt_folder, track_num, &gt_velocities);
@@ -90,7 +86,6 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
       total_framenum++;
 
       if (track_results.ignore_frame[j]) {
-        //printf("Skipping frame: %zu\n", j);
         skipped++;
         continue;
       }
@@ -99,17 +94,12 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
         continue;
       }
 
-      //printf("Not skipping frame: %zu\n", j);
-
       const Eigen::Vector3f& estimated_velocity =
           track_results.estimated_velocities[j];
 
       const double estimated_velocity_magnitude = estimated_velocity.norm();
       const double gt_velocity_magnitude = gt_velocities[j-skipped];
       const double error = estimated_velocity_magnitude - gt_velocity_magnitude;
-
-      /*printf("%zu: Vel: %lf, gt: %lf, error: %lf\n", j, estimated_velocity_magnitude,
-             gt_velocity_magnitude, error);*/
 
       errors.push_back(error);
     }
@@ -143,64 +133,33 @@ void getWithinDistance(
   }
 }
 
-int main(int argc, char **argv)
-{
-  if (argc < 3) {
-    printf("Usage: %s tm_file gt_folder\n", argv[0]);
-    return (1);
-  }
-
-  string color_tm_file = argv[1];
-  string gt_folder = argv[2];
-
-  std::vector<TrackResults> velocity_estimates;
-
-  // Load tracks.
-  printf("Loading file: %s\n", color_tm_file.c_str());
-  track_manager_color::TrackManagerColor track_manager(color_tm_file);
+// Ingore frames in the back where half of the car was recorded at
+// the beginning of a spin and the other half was recorded at the end of a spin.
+// Also ignore frames where the time difference is extremely small, essentially
+// because the car moved between the end of one spin to the beginning of the
+// next.  For such frames, estimating the velocity is prone to errors
+// that should ideally be fixed before the track is passed on to the velocity
+// estimator.
+void find_bad_frames(const track_manager_color::TrackManagerColor& track_manager,
+                     std::vector<TrackResults>* velocity_estimates) {
   const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
       track_manager.tracks_;
 
   // Iterate over all tracks.
-  printf("Found %zu tracks\n", tracks.size());
-
-  // Structure for tracking.
-  Tracker aligner;
-
-  printf("Tracking objects - please wait...\n\n");
-
-  HighResTimer hrt("Total time for tracking");
-  hrt.start();
-
-  int total_num_frames = 0;
-
   for (size_t i = 0; i < tracks.size(); ++i) {
-    // Reset the model builder for this new track.
-    aligner.clear();
-
     // Extract frames.
     const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
     std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
         track->frames_;
 
-    /*if (track->track_num_ != 60) {
-      continue;
-    }*/
-
-    // Structure for storing track output.
-    TrackResults track_estimates;
-    track_estimates.track_num = track->track_num_;
-
-
-    // Iterate over all frames for this track.
-    //printf("Processing track %zu / %zu, tracknum %d with %zu frames\n", i+1, tracks.size(),
-    //      track->track_num_, frames.size());
+    // Structure for storing estimated velocities for this track.
+    TrackResults& track_estimates = (*velocity_estimates)[i];
 
     bool skip_next = false;
     double prev_angle = 0;
     double prev_time = 0;
 
-    //printf("Iterating over %zu frames\n", frames.size());
+    // Iterate over all frames for this track.
     for (size_t j = 0; j < frames.size(); ++j) {
       boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
 
@@ -212,58 +171,146 @@ int main(int argc, char **argv)
       const double time_diff = curr_time - prev_time;
 
       prev_angle = angle;
-      //printf("%zu: Angle: %lf, angle diff: %lf\n", j, angle, angle_diff);
 
       if (j > 0) {
         if (angle_diff <= 1 || j == 0) {
           if (!skip_next) {
             if (time_diff >= 0.05) {
-              track_estimates.ignore_frame.push_back(false);
+              //track_estimates.ignore_frame.push_back(false);
             } else {
-              track_estimates.ignore_frame.push_back(true);
+              track_estimates.ignore_frame[j-1] = true;
             }
           } else {
-            track_estimates.ignore_frame.push_back(true);
+            track_estimates.ignore_frame[j-1] = true;
           }
           skip_next = false;
         } else {
-          track_estimates.ignore_frame.push_back(true);
+          track_estimates.ignore_frame[j-1] = true;
             skip_next = true;
             if (j > 1) {
               track_estimates.ignore_frame[j-2] = true;
             }
         }
       }
+    }
+  }
+}
+
+void track(Tracker* tracker,
+           const track_manager_color::TrackManagerColor& track_manager,
+           std::vector<TrackResults>* velocity_estimates) {
+  HighResTimer hrt("Total time for tracking");
+  hrt.start();
+
+  int total_num_frames = 0;
+
+  const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
+      track_manager.tracks_;
+
+  // Iterate over all tracks.
+  for (size_t i = 0; i < tracks.size(); ++i) {
+    // Reset the tracker for this new track.
+    tracker->clear();
+
+    // Extract frames.
+    const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
+    std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
+        track->frames_;
+
+    // Structure for storing estimated velocities for this track.
+    TrackResults track_estimates;
+    track_estimates.track_num = track->track_num_;
+
+    // Iterate over all frames for this track.
+    for (size_t j = 0; j < frames.size(); ++j) {
+      boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
 
       // Track object.
       Eigen::Vector3f estimated_velocity;
-      aligner.addPoints(frame->cloud_, frame->timestamp_, frame->getCentroid(),
+      tracker->addPoints(frame->cloud_, frame->timestamp_, frame->getCentroid(),
                          &estimated_velocity);
 
-      // The first time we don't have a velocity yet.
+      // The first time we see this object, we don't have a velocity yet.
+      // After the first time, save the estimated velocity.
       if (j > 0) {
         total_num_frames++;
         track_estimates.estimated_velocities.push_back(estimated_velocity);
+
+        // By default, don't ignore any frames.
+        track_estimates.ignore_frame.push_back(false);
       }
     }
 
-    velocity_estimates.push_back(track_estimates);
+    velocity_estimates->push_back(track_estimates);
   }
-
 
   hrt.stop();
   hrt.print();
   const double ms = hrt.getMilliseconds();
   printf("Mean runtime per frame: %lf ms\n", ms / total_num_frames);
+}
 
+void trackAndEvaluate(
+    Tracker* tracker,
+    const track_manager_color::TrackManagerColor& track_manager,
+    const string gt_folder) {
+  // Track all objects and store the estimated velocities.
+  std::vector<TrackResults> velocity_estimates;
+  track(tracker, track_manager, &velocity_estimates);
+
+  // Find bad frames that we want to ignore.
+  find_bad_frames(track_manager, &velocity_estimates);
+
+  // Evaluate the tracking accuracy.
   boost::shared_ptr<std::vector<bool> > empty_filter;
   evaluateTracking(velocity_estimates, gt_folder, empty_filter);
 
+  // Evaluate the tracking accuracy for nearby objects.
   const double max_distance = 5;
   printf("Evaluating for tracks within %lf m\n", max_distance);
   boost::shared_ptr<std::vector<bool> > filter(new std::vector<bool>);
   getWithinDistance(track_manager, max_distance, *filter);
   evaluateTracking(velocity_estimates, gt_folder, filter);
+}
+
+int main(int argc, char **argv)
+{
+  if (argc < 3) {
+    printf("Usage: %s tm_file gt_folder\n", argv[0]);
+    return (1);
+  }
+
+  string color_tm_file = argv[1];
+  string gt_folder = argv[2];
+
+  // Load tracks.
+  printf("Loading file: %s\n", color_tm_file.c_str());
+  track_manager_color::TrackManagerColor track_manager(color_tm_file);
+  printf("Found %zu tracks\n", track_manager.tracks_.size());
+
+  // Track objects and evaluate the accuracy.
+  printf("Tracking objects - please wait...\n\n");
+
+  printf("Tracking objects with the centroid-based Kalman filter baseline - please wait...\n\n");
+  bool use_precision_tracker = false;
+  bool use_color = false;
+  bool use_mean = true;
+  Tracker centroid_tracker(use_precision_tracker, use_color, use_mean);
+  trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
+
+  printf("Tracking objects with the precision tracker - please wait...\n\n");
+  use_precision_tracker = true;
+  use_color = false;
+  use_mean = true;
+  Tracker precision_tracker(use_precision_tracker, use_color, use_mean);
+  trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
+
+  printf("Tracking objects with the precision tracker and color - please wait (will be slow)...\n\n");
+  use_precision_tracker = true;
+  use_color = true;
+  use_mean = true;
+  Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean);
+  trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
 
   return 0;
 }
