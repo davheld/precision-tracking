@@ -12,7 +12,7 @@
 
 #include "down_sampler.h"
 #include "density_grid_evaluator.h"
-#include "lf_rgbd_6d.h"
+#include "lf_rgbd_6d_evaluator.h"
 
 namespace {
 
@@ -58,7 +58,7 @@ PrecisionTracker::PrecisionTracker()
   : down_sampler_(stochastic_downsample)
 {
   if (use_color) {
-    alignment_evaluator_.reset(new LF_RGBD_6D);
+    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator);
   } else {
     alignment_evaluator_.reset(new DensityGridEvaluator);
   }

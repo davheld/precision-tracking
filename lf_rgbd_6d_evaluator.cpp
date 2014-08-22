@@ -6,7 +6,7 @@
  *
  */
 
-#include "lf_rgbd_6d.h"
+#include "lf_rgbd_6d_evaluator.h"
 
 #include <utility>
 #include <vector>
@@ -61,7 +61,7 @@ const int kColorSpace = 0;
 } // namespace
 
 
-LF_RGBD_6D::LF_RGBD_6D()
+LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator()
     : searchTree_(false),  //  //By setting sorted to false,
                                 // the radiusSearch operations will be faster.
       max_nn_(1),
@@ -72,11 +72,11 @@ LF_RGBD_6D::LF_RGBD_6D()
 {
 }
 
-LF_RGBD_6D::~LF_RGBD_6D() {
+LF_RGBD_6D_Evaluator::~LF_RGBD_6D_Evaluator() {
   // TODO Auto-generated destructor stub
 }
 
-void LF_RGBD_6D::setPrevPoints(
+void LF_RGBD_6D_Evaluator::setPrevPoints(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points) {
   AlignmentEvaluator::setPrevPoints(prev_points);
 
@@ -88,7 +88,7 @@ void LF_RGBD_6D::setPrevPoints(
   searchTree_.setEpsilon(kSearchTreeEpsilon);
 }
 
-void LF_RGBD_6D::init(const double xy_sampling_resolution,
+void LF_RGBD_6D_Evaluator::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
           const double sensor_vertical_resolution,
@@ -113,7 +113,7 @@ void LF_RGBD_6D::init(const double xy_sampling_resolution,
   }
 }
 
-void LF_RGBD_6D::score6DTransforms(
+void LF_RGBD_6D_Evaluator::score6DTransforms(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
     const Eigen::Vector3f& current_points_centroid,
     const double xy_sampling_resolution,
@@ -156,7 +156,7 @@ void LF_RGBD_6D::score6DTransforms(
   }
 }
 
-void LF_RGBD_6D::makeEigenRotation(
+void LF_RGBD_6D_Evaluator::makeEigenRotation(
     const double roll, const double pitch, const double yaw,
     Eigen::Quaternion<float>* rotation) const {
   Eigen::AngleAxisf roll_angle(roll, Eigen::Vector3f::UnitZ());
@@ -166,7 +166,7 @@ void LF_RGBD_6D::makeEigenRotation(
   *rotation = roll_angle * yaw_angle * pitch_angle;
 }
 
-void LF_RGBD_6D::makeEigenTransform(
+void LF_RGBD_6D_Evaluator::makeEigenTransform(
     const Eigen::Vector3f& centroid,
     const double delta_x, const double delta_y, const double delta_z,
     const double roll, const double pitch, const double yaw,
@@ -194,7 +194,7 @@ void LF_RGBD_6D::makeEigenTransform(
   *transform = transformationMatrix;
 }
 
-double LF_RGBD_6D::getLogProbability(
+double LF_RGBD_6D_Evaluator::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& current_points_centroid,
     const MotionModel& motion_model,
@@ -208,7 +208,7 @@ double LF_RGBD_6D::getLogProbability(
                     x, y, z, roll, pitch, yaw);
 }
 
-double LF_RGBD_6D::getLogProbability(
+double LF_RGBD_6D_Evaluator::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& current_points_centroid,
     const MotionModel& motion_model,
@@ -256,7 +256,7 @@ double LF_RGBD_6D::getLogProbability(
   return log_prob;
 }
 
-double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
+double LF_RGBD_6D_Evaluator::get_log_prob(const pcl::PointXYZRGB& current_pt) {
   // Find the nearest neighbor.
   searchTree_.nearestKSearch(current_pt, max_nn_, nn_indices_, nn_sq_dists_);
   const pcl::PointXYZRGB& prev_pt = (*prev_points_)[nn_indices_[0]];
@@ -285,7 +285,7 @@ double LF_RGBD_6D::get_log_prob(const pcl::PointXYZRGB& current_pt) {
   return log_point_prob;
 }
 
-double LF_RGBD_6D::computeColorProb(const pcl::PointXYZRGB& prev_pt,
+double LF_RGBD_6D_Evaluator::computeColorProb(const pcl::PointXYZRGB& prev_pt,
     const pcl::PointXYZRGB& pt, const double point_match_prob_spatial_i) const {
   // Because we are using color, we have to modify the smoothing factor.
   const double factor1 = smoothing_factor_ / (smoothing_factor_ + 1);

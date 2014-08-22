@@ -48,10 +48,10 @@ public:
   double volume;
 };
 
-class LF_RGBD_6D : public AlignmentEvaluator {
+class LF_RGBD_6D_Evaluator : public AlignmentEvaluator {
 public:
-  LF_RGBD_6D ();
-  virtual ~LF_RGBD_6D();
+  LF_RGBD_6D_Evaluator ();
+  virtual ~LF_RGBD_6D_Evaluator();
 
   void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
 

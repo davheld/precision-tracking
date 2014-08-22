@@ -21,6 +21,6 @@ include_directories ("${PROJECT_SOURCE_DIR}")
 add_executable (test_tracking test_tracking.cpp track_manager_color.cpp
   tracker.cpp precision_tracker.cpp motion_model.cpp
   adh_tracker3d.cpp down_sampler.cpp scored_transform.cpp
-  density_grid_evaluator.cpp lf_rgbd_6d.cpp high_res_timer.cpp
+  density_grid_evaluator.cpp lf_rgbd_6d_evaluator.cpp high_res_timer.cpp
   alignment_evaluator.cpp)
 target_link_libraries (test_tracking ${PCL_LIBRARIES})
