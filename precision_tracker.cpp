@@ -11,7 +11,7 @@
 #include <pcl/common/common.h>
 
 #include "down_sampler.h"
-#include "density_grid_tracker.h"
+#include "density_grid_evaluator.h"
 #include "lf_rgbd_6d.h"
 
 namespace {
@@ -60,7 +60,7 @@ PrecisionTracker::PrecisionTracker()
   if (use_color) {
     alignment_evaluator_.reset(new LF_RGBD_6D);
   } else {
-    alignment_evaluator_.reset(new DensityGridTracker);
+    alignment_evaluator_.reset(new DensityGridEvaluator);
   }
 }
 

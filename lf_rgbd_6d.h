@@ -3,6 +3,13 @@
  *
  *  Created on: May 1, 2014
  *      Author: davheld
+ *
+ * Using the likelihood field model from
+ * Probabilistic Robotics, Thrun, et al, 2005.
+ * for 6D tracking with color information.
+ *
+ * Parameters are taken based on the latent surface model from RSS 2014,
+ * Held, et al.
  */
 
 #ifndef LF_RGBD_6D_H_
@@ -14,7 +21,6 @@
 
 #include "motion_model.h"
 #include "scored_transform.h"
-#include "density_grid_tracker.h"
 #include "alignment_evaluator.h"
 
 // A 6D transform

@@ -26,10 +26,10 @@ struct ScoredTransform;
 struct XYZTransform;
 class MotionModel;
 
-class DensityGridTracker : public AlignmentEvaluator {
+class DensityGridEvaluator : public AlignmentEvaluator {
 public:
-  DensityGridTracker();
-  virtual ~DensityGridTracker();
+  DensityGridEvaluator();
+  virtual ~DensityGridEvaluator();
 
 private:
   void init(const double xy_sampling_resolution,

@@ -5,7 +5,7 @@
  *      Author: davheld
  */
 
-#include "density_grid_tracker.h"
+#include "density_grid_evaluator.h"
 
 #include <stdlib.h>
 #include <numeric>
@@ -35,16 +35,16 @@ using std::min;
 
 // Initialize the density grid to all have log(kSmoothingFactor), so we do
 // not give a probability of 0 to any location.
-DensityGridTracker::DensityGridTracker()
+DensityGridEvaluator::DensityGridEvaluator()
   : density_grid_(kMaxXSize, vector<vector<double> >(
         kMaxYSize, vector<double>(kMaxZSize, log(smoothing_factor_)))) {
 }
 
-DensityGridTracker::~DensityGridTracker() {
+DensityGridEvaluator::~DensityGridEvaluator() {
 	// TODO Auto-generated destructor stub
 }
 
-void DensityGridTracker::init(const double xy_sampling_resolution,
+void DensityGridEvaluator::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
           const double sensor_vertical_resolution,
@@ -60,7 +60,7 @@ void DensityGridTracker::init(const double xy_sampling_resolution,
   computeDensityGrid(prev_points_);
 }
 
-void DensityGridTracker::computeDensityGridParameters(
+void DensityGridEvaluator::computeDensityGridParameters(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
     const double xy_sampling_resolution,
     const double z_sampling_resolution,
@@ -128,7 +128,7 @@ void DensityGridTracker::computeDensityGridParameters(
       max(1.0, ceil(kSpilloverRadius * sigma_z_ / z_grid_step_ - 1));
 }
 
-void DensityGridTracker::computeDensityGrid(
+void DensityGridEvaluator::computeDensityGrid(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points) {
   // Apply this offset when converting from the point location to the index.
   const double x_offset = -min_pt_.x / xy_grid_step_;
@@ -254,7 +254,7 @@ void DensityGridTracker::computeDensityGrid(
   }
 }
 
-double DensityGridTracker::getLogProbability(
+double DensityGridEvaluator::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& ,
     const MotionModel& motion_model,

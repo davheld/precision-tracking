@@ -4,12 +4,6 @@
  * Created on: August 6, 2014
  *      Author: davheld
  *
- * Using the likelihood field model from
- * Probabilistic Robotics, Thrun, et al, 2005.
- * for 6D tracking with color information.
- *
- * Parameters are taken based on the latent surface model from RSS 2014,
- * Held, et al.
  */
 
 #include "lf_rgbd_6d.h"
@@ -20,8 +14,6 @@
 
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
-
-#include "density_grid_tracker.h"
 
 using std::max;
 using std::min;
