@@ -23,3 +23,14 @@ void ScoredTransformXYZ::getEigen(Eigen::Vector3f* translation) {
   (*translation)(1) = y_;
   (*translation)(2) = z_;
 }
+
+// Helper function.
+bool compareTransforms(const ScoredTransform& transform_i,
+                       const ScoredTransform& transform_j)
+{
+  const double score_i = transform_i.getUnnormalizedLogProb() -
+      log(transform_i.getVolume());
+  const double score_j = transform_j.getUnnormalizedLogProb() -
+      log(transform_j.getVolume());
+  return score_i > score_j;
+}

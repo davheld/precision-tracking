@@ -1,12 +1,12 @@
 /*
- * LFDiscrete3d.h
- *
  *  Created on: May 1, 2014
  *      Author: davheld
  *
  * Using the likelihood field model from
  * Probabilistic Robotics, Thrun, et al, 2005.
- * for 6D tracking with color information.
+ * to evaluate the probability of a given set of alignments.
+ * This evaluator handles 6D transforms (including rotations)
+ * and can make use of color information.
  *
  * Parameters are taken based on the latent surface model from RSS 2014,
  * Held, et al.

@@ -93,7 +93,7 @@ void ADHTracker3d::track(
     recomputeProbs(region_prob, &scored_transforms3D);
 
     // Save the output to the final scored transforms.
-    final_scored_transforms3D->addScoredTransforms(scored_transforms3D);
+    final_scored_transforms3D->appendScoredTransforms(scored_transforms3D);
 
     // If we are below the minimum sampling resolution, we are done.
     if (current_xy_sampling_resolution <= min_xy_sampling_resolution) {
@@ -146,13 +146,13 @@ void ADHTracker3d::makeNewTransforms3D(
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
     std::vector<XYZTransform>* new_xyz_transforms,
     double* total_recomputing_prob) const {
-  std::vector<ScoredTransformXYZ>& scored_transforms_xyz =
-      scored_transforms->getScoredTransforms();
   // If we are only using the top k transforms, we need to sort them.
   if (kMaxNumTransforms > 0) {
-    std::sort(scored_transforms_xyz.begin(), scored_transforms_xyz.end(),
-      compareTransforms);
+    scored_transforms->sortDescending();
   }
+
+  std::vector<ScoredTransformXYZ>& scored_transforms_xyz =
+      scored_transforms->getScoredTransforms();
 
   // Any transforms that we are recomputing at a higher resolution should
   // be removed from the list of previously scored transforms.

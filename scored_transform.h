@@ -13,7 +13,10 @@
 
 #include <Eigen/Eigen>
 
-// A pure translation.
+// A pure translation, which represents a proposed alignment between
+// the points in the current frame to the previuos frame.
+// The volume is the size of the discretized region of the
+// state space represented by this transform.
 struct XYZTransform {
 public:
   double x, y, z;
@@ -30,13 +33,17 @@ public:
   {  }
 };
 
+// Base class for a scored transform, which stores the unnormalized log
+// probability of a given alignment.
 class ScoredTransform {
 public:
   ScoredTransform() {
   }
 
-  ScoredTransform(const double log_prob)
-    : unnormalized_log_prob_(log_prob)
+  ScoredTransform(const double log_prob,
+                  const double volume)
+    : unnormalized_log_prob_(log_prob),
+      volume_(volume)
   {
   }
 
@@ -46,13 +53,20 @@ public:
     unnormalized_log_prob_ = new_log_prob;
   }
 
+  double getVolume() const { return volume_; }
+
+
 protected:
   // Unnormalized Log probability.
   double unnormalized_log_prob_;
 
+  // The volume is the size of the discretized region of the
+  // state space represented by this transform.
+  double volume_;
+
 };
 
-// A transform in the ground plane and its associated log probability score.
+// A translation and its associated log probability.
 class ScoredTransformXYZ : public ScoredTransform {
 public:
   ScoredTransformXYZ(
@@ -61,11 +75,10 @@ public:
       const double z,
       const double log_prob,
       const double volume)
-    : ScoredTransform(log_prob),
+    : ScoredTransform(log_prob, volume),
       x_(x),
       y_(y),
-      z_(z),
-      volume_(volume)
+      z_(z)
   {
   }
 
@@ -74,22 +87,22 @@ public:
 
   virtual ~ScoredTransformXYZ();
 
+  // Convert the translation to an Eigen vector.
   void getEigen(Eigen::Vector3f* translation);
 
   // Getters.
   double getX() const       { return x_;    }
   double getY() const       { return y_;    }
   double getZ() const       { return z_;    }
-  double getVolume() const    { return volume_; }
 
 protected:
   // Translation parameters (meters).
   double x_, y_, z_;
-  double volume_;
 };
 
 // A transform and its associated log probability score.
-// We assume that we rotate first about the centroid, and then translate.
+// We assume that we rotate the object first about the centroid and
+// then translate.
 class ScoredTransform6D : public ScoredTransformXYZ {
 public:
   ScoredTransform6D(
@@ -124,25 +137,15 @@ public:
   double getYaw() const    { return yaw_;    }
 
 private:
-  // Rotation parameters (radians?).
+  // Rotation parameters (in radians).
   double roll_, pitch_, yaw_;
 };
 
-namespace {
+// Helper function for sorting.
+bool compareTransforms(const ScoredTransform& transform_i,
+                       const ScoredTransform& transform_j);
 
-bool compareTransforms(const ScoredTransformXYZ& transform_i,
-                       const ScoredTransformXYZ& transform_j)
-{
-  const double score_i = transform_i.getUnnormalizedLogProb() -
-      log(transform_i.getVolume());
-  const double score_j = transform_j.getUnnormalizedLogProb() -
-      log(transform_j.getVolume());
-  return score_i > score_j;
-}
-
-} // namespace
-
-// Collection of Scored Transforms.
+// A collection of Scored Transforms.
 template <class TransformType>
 class ScoredTransforms {
 public:
@@ -152,24 +155,27 @@ public:
 
   ScoredTransforms() {}
 
+  // Sort the transforms in descending order of probability density
+  // (probability per unit volume).
+  void sortDescending() {
+    std::sort(scored_transforms_.begin(), scored_transforms_.end(),
+              compareTransforms);
+  }
+
+  // Finds the highest scoring transform in terms of probability density
+  // (probability per unit volume), which is the mode of the distribution.
   void findBest(TransformType* best_transform) const;
 
-  void setScoredTransforms(const std::vector<TransformType>& scored_transforms) {
-    scored_transforms_ = scored_transforms;
-  }
-
-  void setScoredTransforms(const ScoredTransforms& scored_transforms) {
-    scored_transforms_ = scored_transforms.getScoredTransforms();
-  }
-
-  void addScoredTransforms(const ScoredTransforms& scored_transforms) {
+  // Append scored transforms to the end of the current list.
+  void appendScoredTransforms(const ScoredTransforms& scored_transforms) {
     scored_transforms_.insert(
         scored_transforms_.end(),
         scored_transforms.getScoredTransforms().begin(),
         scored_transforms.getScoredTransforms().end());
   }
 
-
+  // Normalize the probabilities for all of the scored transforms so they
+  // sum to 1, and return the resulting list of probabilities.
   const std::vector<double> getNormalizedProbs() const;
 
   const std::vector<TransformType>& getScoredTransforms() const {
@@ -179,6 +185,15 @@ public:
   // Non-const version.
   std::vector<TransformType>& getScoredTransforms() {
     return scored_transforms_;
+  }
+
+  void setScoredTransforms(
+      const std::vector<TransformType>& scored_transforms) {
+    scored_transforms_ = scored_transforms;
+  }
+
+  void setScoredTransforms(const ScoredTransforms& scored_transforms) {
+    scored_transforms_ = scored_transforms.getScoredTransforms();
   }
 
   void clear() {
@@ -201,11 +216,6 @@ public:
     scored_transforms_[i] = scored_transform;
   }
 
-  void sortDescending() {
-    std::sort(scored_transforms_.begin(), scored_transforms_.end(),
-              compareTransforms);
-  }
-
 private:
   // A collection of transforms and their scores.
   std::vector<TransformType> scored_transforms_;
@@ -218,9 +228,11 @@ void ScoredTransforms<TransformType>::findBest(
   double best_score = -std::numeric_limits<double>::max();
 
   for (size_t i = 0; i < scored_transforms_.size(); ++i) {
+    // Compute the unnormalized log probability density of this transform.
     const double score = scored_transforms_[i].getUnnormalizedLogProb() -
         log(scored_transforms_[i].getVolume());
 
+    // Find the transform with the highest unnormalized log probability density.
     if (score > best_score) {
       best_score = score;
       best_transform_index = i;
@@ -238,9 +250,10 @@ void ScoredTransforms<TransformType>::findBest(
 
 template <class TransformType>
 const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() const {
-  std::vector<double> normalized_probs;
-
+  // Allocate vector to store the normalized probabilities.
   const size_t num_transforms = scored_transforms_.size();
+  std::vector<double> normalized_probs;
+  normalized_probs.reserve(num_transforms);
 
   // First obtain a list of all probabilities.
   std::vector<double> log_probabilities(num_transforms);
@@ -261,8 +274,6 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
 
   // Multiply all probabilities by 10 ^ n_factor, and then find the
   // (not log) probability.
-  normalized_probs.clear();
-  normalized_probs.reserve(num_transforms);
   for (size_t i = 0; i < num_transforms; ++i) {
     const double prob = exp(log_probabilities[i] + n_factor * log(10));
     normalized_probs.push_back(prob);

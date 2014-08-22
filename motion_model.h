@@ -20,7 +20,7 @@ struct TransformComponents{
   {
   }
 
-  float x,y,z,roll,pitch,yaw;
+  float x, y, z, roll, pitch, yaw;
 };
 
 class MotionModel {
