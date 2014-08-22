@@ -9,6 +9,7 @@
 
 #include <boost/math/constants/constants.hpp>
 #include <pcl/common/common.h>
+#include <pcl/common/centroid.h>
 
 #include "down_sampler.h"
 #include "density_grid_evaluator.h"
@@ -81,8 +82,9 @@ void PrecisionTracker::track(
   estimateRange(current_points, prev_points, &xRange, &yRange, &zRange);
 
   // Compute the centroid.
-  Eigen::Vector3f current_points_centroid;
-  computeCentroid(current_points, &current_points_centroid);
+  Eigen::Vector4f current_points_centroid_4d;
+  pcl::compute3DCentroid (*current_points, current_points_centroid_4d);
+  const Eigen::Vector3f current_points_centroid = current_points_centroid_4d.head(3);
 
   // Down-sample the previous points.
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previous_model_downsampled(
@@ -178,13 +180,13 @@ void PrecisionTracker::estimateRange(
 Eigen::Matrix4f PrecisionTracker::estimateAlignmentCentroidDiff(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& curr_points,
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points) const {
-  Eigen::Vector3f newCentroid;
-  computeCentroid(curr_points, &newCentroid);
+  Eigen::Vector4f new_centroid;
+  pcl::compute3DCentroid (*curr_points, new_centroid);
 
-  Eigen::Vector3f oldCentroid;
-  computeCentroid(prev_points, &oldCentroid);
+  Eigen::Vector4f old_centroid;
+  pcl::compute3DCentroid (*prev_points, old_centroid);
 
-  Eigen::Vector3f centroidDiff =  oldCentroid - newCentroid;
+  const Eigen::Vector4f centroidDiff =  old_centroid - new_centroid;
 
   Eigen::Matrix4f guess = Eigen::Matrix4f::Identity();
 
@@ -195,20 +197,4 @@ Eigen::Matrix4f PrecisionTracker::estimateAlignmentCentroidDiff(
   guess(2,3) = 0;
 
   return guess;
-}
-
-void PrecisionTracker::computeCentroid(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
-    Eigen::Vector3f* centroid) {
-  *centroid = Eigen::Vector3f::Zero();
-
-  for (pcl::PointCloud<pcl::PointXYZRGB>::const_iterator it = points->begin();
-       it < points->end(); it++) {
-    pcl::PointXYZRGB p = *it;
-    (*centroid)(0) += p.x;
-    (*centroid)(1) += p.y;
-    (*centroid)(2) += p.z;
-  }
-
-  *centroid /= static_cast<double>(points->size());
 }

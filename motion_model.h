@@ -33,7 +33,7 @@ public:
       const double& time_diff);
 
 	// Add centroid diff and update the Kalman filter.
-  void addCentroidDiff(const Eigen::Vector3f& centroid_diff,
+  void addCentroidDiff(const Eigen::Vector4f& centroid_diff,
                        const double time_diff);
 
 	void propagate(const double& time_diff);

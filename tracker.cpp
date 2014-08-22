@@ -7,6 +7,8 @@
 
 #include "tracker.h"
 
+#include <pcl/common/centroid.h>
+
 namespace{
 
 const bool kUseMode = false;
@@ -59,13 +61,13 @@ void Tracker::addPoints(
 
     if (useCentroid) {
 
-      Eigen::Vector3f new_centroid;
-      PrecisionTracker::computeCentroid(current_points, &new_centroid);
+      Eigen::Vector4f new_centroid;
+      pcl::compute3DCentroid (*current_points, new_centroid);
 
-      Eigen::Vector3f old_centroid;
-      PrecisionTracker::computeCentroid(previousModel_, &old_centroid);
+      Eigen::Vector4f old_centroid;
+      pcl::compute3DCentroid (*previousModel_, old_centroid);
 
-      const Eigen::Vector3f& centroidDiff =  old_centroid - new_centroid;
+      const Eigen::Vector4f& centroidDiff =  old_centroid - new_centroid;
 
       motion_model_->addCentroidDiff(centroidDiff, timestamp_diff);
 

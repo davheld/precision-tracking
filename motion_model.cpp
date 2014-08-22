@@ -195,7 +195,7 @@ double MotionModel::computeScore(const TransformComponents& components) const {
   }
 }
 
-void MotionModel::addCentroidDiff(const Eigen::Vector3f& centroid_diff,
+void MotionModel::addCentroidDiff(const Eigen::Vector4f& centroid_diff,
                                   const double recorded_time_diff){
   // If the recorded_time_diff is 0 or very small, we avoid numerical
   // issues by thresholding at 0.01.

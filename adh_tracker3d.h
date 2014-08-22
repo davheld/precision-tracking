@@ -39,7 +39,7 @@ public:
 	    const std::pair <double, double>& zRange,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-	    const Eigen::Vector3f &current_points_centroid,
+      const Eigen::Vector3f& current_points_centroid,
 	    const MotionModel& motion_model,
       const double xy_sensor_resolution,
       const double z_sensor_resolution,

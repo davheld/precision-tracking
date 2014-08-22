@@ -28,9 +28,6 @@ public:
       const MotionModel& motion_model,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 
-  static void computeCentroid(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
-      Eigen::Vector3f* centroid);
 private:  
   void estimateRange(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,

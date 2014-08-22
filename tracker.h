@@ -33,9 +33,7 @@ private:
   double prev_timestamp_;
 
   boost::shared_ptr<MotionModel> motion_model_;
-
   PrecisionTracker precision_tracker_;
-
 };
 
 
