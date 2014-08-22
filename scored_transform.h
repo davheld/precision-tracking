@@ -141,9 +141,9 @@ bool compareTransforms(const ScoredTransformXYZ& transform_i,
                        const ScoredTransformXYZ& transform_j)
 {
   const double score_i = transform_i.getUnnormalizedLogProb() -
-      fast_functions1_.getFastLog(transform_i.getVolume());
+      log(transform_i.getVolume());
   const double score_j = transform_j.getUnnormalizedLogProb() -
-      fast_functions1_.getFastLog(transform_j.getVolume());
+      log(transform_j.getVolume());
   return score_i > score_j;
 }
 
@@ -177,7 +177,7 @@ public:
   }
 
 
-  const std::vector<double>& getNormalizedProbs() const;
+  const std::vector<double> getNormalizedProbs() const;
 
   const std::vector<TransformType>& getScoredTransforms() const {
     return scored_transforms_;
@@ -190,14 +190,10 @@ public:
 
   void clear() {
     scored_transforms_.clear();
-    normalized_probs_.clear();
-    normalized_probs_approx_.clear();
   }
 
   void reserve(const size_t n) {
     scored_transforms_.reserve(n);
-    normalized_probs_.reserve(n);
-    normalized_probs_approx_.reserve(n);
   }
 
   void addScoredTransform(const TransformType& transform) {
@@ -206,8 +202,6 @@ public:
 
   void resize(size_t n) {
     scored_transforms_.resize(n);
-    normalized_probs_.reserve(n);
-    normalized_probs_approx_.reserve(n);
   }
 
   void set(const TransformType& scored_transform, const int i) {
@@ -222,13 +216,6 @@ public:
 private:
   // A collection of transforms and their scores.
   std::vector<TransformType> scored_transforms_;
-
-  // A normalized probability for each transform.
-  mutable std::vector<double> normalized_probs_;
-
-  // A normalized probability for each transform.
-  mutable std::vector<double> normalized_probs_approx_;
-
 };
 
 template <class TransformType>
@@ -239,7 +226,7 @@ void ScoredTransforms<TransformType>::findBest(
 
   for (size_t i = 0; i < scored_transforms_.size(); ++i) {
     const double score = scored_transforms_[i].getUnnormalizedLogProb() -
-        fast_functions1_.getFastLog(scored_transforms_[i].getVolume());
+        log(scored_transforms_[i].getVolume());
 
     if (score > best_score) {
       best_score = score;
@@ -257,7 +244,9 @@ void ScoredTransforms<TransformType>::findBest(
 
 
 template <class TransformType>
-const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs() const {
+const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() const {
+  std::vector<double> normalized_probs;
+
   const size_t num_transforms = scored_transforms_.size();
 
   // First obtain a list of all probabilities.
@@ -279,11 +268,11 @@ const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs()
 
   // Multiply all probabilities by 10 ^ n_factor, and then find the
   // (not log) probability.
-  normalized_probs_.clear();
-  normalized_probs_.reserve(num_transforms);
+  normalized_probs.clear();
+  normalized_probs.reserve(num_transforms);
   for (size_t i = 0; i < num_transforms; ++i) {
     const double prob = exp(log_probabilities[i] + n_factor * log(10));
-    normalized_probs_.push_back(prob);
+    normalized_probs.push_back(prob);
   }
 
   // Normalize.
@@ -291,7 +280,7 @@ const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs()
 //      std::accumulate(probabilities->begin(), probabilities->end(), 0);
   double sum_prob2 = 0;
   for (size_t i = 0; i < num_transforms; ++i) {
-    sum_prob2 += normalized_probs_[i];
+    sum_prob2 += normalized_probs[i];
   }
 
   // Verfify that something bad didn't happen.
@@ -302,17 +291,17 @@ const std::vector<double>& ScoredTransforms<TransformType>::getNormalizedProbs()
     }
     printf("Probs:\n");
     for (size_t i = 0; i < num_transforms; ++i) {
-      printf("%lf\n", normalized_probs_[i]);
+      printf("%lf\n", normalized_probs[i]);
     }
     exit(1);
   }
 
   // Normalize the probabilities.
   for (size_t i = 0; i < num_transforms; ++i) {
-    normalized_probs_[i] /= sum_prob2;
+    normalized_probs[i] /= sum_prob2;
   }
 
-  return normalized_probs_;
+  return normalized_probs;
 }
 
 

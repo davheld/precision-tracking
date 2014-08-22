@@ -17,6 +17,7 @@ add_definitions(${PCL_DEFINITIONS})
 #add_library(track_manager_color track_manager_color.h track_manager_color.cpp)
 
 include_directories ("${PROJECT_SOURCE_DIR}")
+
 add_executable (tracker tracker.cpp track_manager_color.cpp model_builder.cpp
   fast_functions.cpp precision_tracker.cpp model_builder.cpp motion_model.cpp
   adh_tracker3d.cpp down_sampler.cpp scored_transform.cpp

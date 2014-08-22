@@ -25,12 +25,14 @@ const double kCentroidMeasurementNoise = 0.4;
 // The initial velocity variance for a centroid-based Kalman filter.
 const double kCentroidInitVelocityVariance = 5;
 
+// Minimum probability returned by the motion model.
+const double kMotionMinProb = 1e-4;
 
 } // namespace
 
 MotionModel::MotionModel()
   :pdf_constant_(1),
-   min_score_(1e-4),
+   min_score_(kMotionMinProb),
    valid_eigen_vectors_(false),
    valid_(false)
 {
@@ -264,46 +266,6 @@ void MotionModel::propagate(const double& recorded_time_diff){
   const double k = mean_delta_position_.size();
   const double determinant = covariance_delta_position_.determinant();
   pdf_constant_ = 1 / (pow(2 * pi, k/2) * pow(determinant, 0.5));
-
-  // Compute the pdf's maximum value.
-	TransformComponents mean_components;
-	mean_components.x = mean_delta_position_(0);
-	mean_components.y = mean_delta_position_(1);
-	mean_components.z = mean_delta_position_(2);
-  const double max_score = computeScore(mean_components);
-
-  // Compute the eigenvalues of the position covariance matrix.
-  Eigen::SelfAdjointEigenSolver<Eigen::Matrix3d> eigensolver(
-        covariance_delta_position_);
-
-	if (eigensolver.info() != Eigen::Success){
-		min_score_ = max_score / 100;
-    printf("Warning - Cannot compute eigenvalues - instead chose min_score"
-           "as %lf\n", min_score_);
-	} else {
-    const Eigen::Vector3d eigen_values = eigensolver.eigenvalues();
-    const double max_eigenvalue = eigen_values(2);
-
-		// Save eigenvectors.
-		eigen_vectors_ = eigensolver.eigenvectors();
-		valid_eigen_vectors_ = true;
-
-    const Eigen::Vector3d max_eigenvector = eigensolver.eigenvectors().col(2);
-
-    // Find the value of the pdf at num_sigmas out from the mean.
-    const double num_sigmas = 5;
-
-		TransformComponents sigma_components;
-    sigma_components.x = mean_delta_position_(0) + max_eigenvector(0) * sqrt(max_eigenvalue) * num_sigmas;
-    sigma_components.y = mean_delta_position_(1) + max_eigenvector(1) * sqrt(max_eigenvalue) * num_sigmas;
-    sigma_components.z = mean_delta_position_(2) + max_eigenvector(2) * sqrt(max_eigenvalue) * num_sigmas;
-
-    const double sigma_score = computeScore(sigma_components);
-
-    // We set this value to be the minimum probability returned by the
-    // motion model.
-		min_score_ = sigma_score;
-	}
 }
 
 
