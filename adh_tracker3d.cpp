@@ -35,12 +35,6 @@ const size_t kMaxNumTransforms = 0;
 // Only divide cells whose probabilities are greater than kMinProb.
 const double kMinProb = 0.0001;
 
-bool compareTransforms1(const ScoredTransformXYZ& transform_i,
-    const ScoredTransformXYZ& transform_j) {
-  return transform_i.getUnnormalizedLogProb() >
-      transform_j.getUnnormalizedLogProb();
-}
-
 } // namespace
 
 ADHTracker3d::ADHTracker3d(){
@@ -157,7 +151,7 @@ void ADHTracker3d::makeNewTransforms3D(
   // If we are only using the top k transforms, we need to sort them.
   if (kMaxNumTransforms > 0) {
     std::sort(scored_transforms_xyz.begin(), scored_transforms_xyz.end(),
-      compareTransforms1);
+      compareTransforms);
   }
 
   // Any transforms that we are recomputing at a higher resolution should

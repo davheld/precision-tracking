@@ -17,7 +17,7 @@
 namespace {
 
 // Whether to include color probabilities when performing the alignment.
-const bool use_color = true;
+const bool use_color = false;
 
 // We downsample the current frame of the tracked object to have this many
 // points.
