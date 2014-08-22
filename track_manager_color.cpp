@@ -5,13 +5,22 @@
 
 #include <vector>
 
-using namespace std;
-using namespace Eigen;
-using namespace pcl;
-
 /************************************************************/
 /******************** TrackManager ********************/
 /************************************************************/
+
+using std::vector;
+using std::string;
+using std::ifstream;
+using std::istream;
+using std::ofstream;
+using std::ostream;
+using std::ios;
+using std::endl;
+using std::cerr;
+using std::pair;
+using std::cout;
+
 namespace track_manager_color {
 
 TrackManagerColor::TrackManagerColor() :
@@ -94,8 +103,6 @@ void TrackManagerColor::serialize(ostream& out) {
   out << "TrackManager" << endl;
   out << "serialization_version_" << endl;
   out << serialization_version_ << endl;
-//   out << "num_tracks" << endl;
-//   out << tracks_.size() << endl;
   for(size_t i=0; i<tracks_.size(); ++i) {
     printf("Serializing track %zu\n", i);
     tracks_[i]->serialize(out);
@@ -129,7 +136,7 @@ bool TrackManagerColor::deserialize(istream& istrm, const int tracknum) {
     if(tr->deserialize(istrm)){
     	if (i == tracknum){
         tracks_.push_back(tr);
-        //once we find the target tracknum, exit
+        // Once we find the target tracknum, exit.
         break;
     	}
     i++;
@@ -168,9 +175,6 @@ bool TrackManagerColor::deserialize(istream& istrm) {
   while(true) {
     boost::shared_ptr<Track> tr(new Track());
     if(tr->deserialize(istrm)){
-      //if (i % 1000 == 0){
-      //	printf("Deserializing track #%d\n", i);
-      //}
       i++;
       tracks_.push_back(tr);
     } else
@@ -197,7 +201,6 @@ bool TrackManagerColor::operator==(const TrackManagerColor& tm) {
 }
 
 double getTrackLength(const Track& tr) {
-	//double size = tr.frames_[0]->cloud_->width * tr.frames_[0]->cloud_->height;
   double z = tr.getMeanNumPoints() + tr.frames_[0]->cloud_->points.size();
   return (double) tr.frames_.size() + 1.0 / (1.0 + exp(-z / 10000.0)); // Break ties consistently with high probability.
 }
@@ -212,7 +215,8 @@ void TrackManagerColor::sortTracks(double (*rateTrack)(const Track&)) {
     length_idx[i].first = rateTrack(*tracks_[i]);
     length_idx[i].second = tracks_[i];
   }
-  greater< pair<double, boost::shared_ptr<Track> > > emacs = greater< pair<double, boost::shared_ptr<Track> > >();
+  std::greater< pair<double, boost::shared_ptr<Track> > > emacs =
+      std::greater< pair<double, boost::shared_ptr<Track> > >();
   sort(length_idx.begin(), length_idx.end(), emacs); //Descending.
 
   for(size_t i=0; i<tracks_.size(); ++i) {
@@ -227,7 +231,8 @@ void TrackManagerColor::sortTracks(const vector<double>& track_ratings) {
     length_idx[i].first = track_ratings[i];
     length_idx[i].second = tracks_[i];
   }
-  greater< pair<double, boost::shared_ptr<Track> > > emacs = greater< pair<double, boost::shared_ptr<Track> > >();
+  std::greater< pair<double, boost::shared_ptr<Track> > > emacs =
+      std::greater< pair<double, boost::shared_ptr<Track> > >();
   sort(length_idx.begin(), length_idx.end(), emacs); //Descending.
 
   for(size_t i=0; i<tracks_.size(); ++i) {
@@ -416,7 +421,9 @@ bool Frame::deserialize(std::istream& istrm) {
   }
   istrm >> serialization_version_;
   if(serialization_version_ != FRAME_SERIALIZATION_VERSION) {
-    cerr << "Frame serialization version is " << serialization_version_ << ", expected " << FRAME_SERIALIZATION_VERSION << ", aborting." << endl;
+    cerr << "Frame serialization version is " << serialization_version_
+         << ", expected " << FRAME_SERIALIZATION_VERSION << ", aborting."
+         << endl;
     return false;
   }
   getline(istrm, line);
@@ -451,12 +458,12 @@ void Frame::serialize(std::ostream& out) const{
   serializePointCloud(*cloud_, out);
 }
 
-Vector3f Frame::getCentroid() {
+Eigen::Vector3f Frame::getCentroid() {
   if(centroid_)
     return *centroid_;
 
-  centroid_ = boost::shared_ptr<Vector3f>(new Vector3f());
-  *centroid_ = Vector3f::Zero();
+  centroid_ = boost::shared_ptr<Eigen::Vector3f>(new Eigen::Vector3f());
+  *centroid_ = Eigen::Vector3f::Zero();
   for(size_t i = 0; i < cloud_->points.size(); ++i) {
     centroid_->coeffRef(0) += cloud_->points[i].x;
     centroid_->coeffRef(1) += cloud_->points[i].y;
@@ -467,12 +474,12 @@ Vector3f Frame::getCentroid() {
   return *centroid_;
 }
 
-MatrixXf Frame::getBoundingBox() {
+Eigen::MatrixXf Frame::getBoundingBox() {
   if(bounding_box_)
     return *bounding_box_;
 
-  bounding_box_ = boost::shared_ptr<MatrixXf>(new MatrixXf(2, 2));
-  MatrixXf& bb = *bounding_box_;
+  bounding_box_ = boost::shared_ptr<Eigen::MatrixXf>(new Eigen::MatrixXf(2, 2));
+  Eigen::MatrixXf& bb = *bounding_box_;
   bb(0, 0) = FLT_MAX; // Small x.
   bb(1, 0) = FLT_MAX; // Small y.
   bb(0, 1) = -FLT_MAX; // Big x.
@@ -494,7 +501,7 @@ MatrixXf Frame::getBoundingBox() {
 }
 
 double Frame::getDistance() {
-  Vector3f centroid = getCentroid();
+  Eigen::Vector3f centroid = getCentroid();
   return (centroid.cast<double>()).norm();
 }
 
@@ -646,7 +653,8 @@ bool cloudsEqual(const pcl::PointCloud<pcl::PointXYZRGB>& c1,
 
   // -- Check the points.
   if(c1.points.size() != c2.points.size()) {
-    //cout << "Different number of points: " << c1.get_points_size() << " " << c2.get_points_size() << endl;
+    //cout << "Different number of points: " << c1.get_points_size()
+    // << " " << c2.get_points_size() << endl;
     return false;
   }
 
@@ -682,4 +690,4 @@ bool floatEq(float x, float y, int maxUlps)
   return false;
 }  
   
-}// namespace track_manager
+} // namespace track_manager
