@@ -18,9 +18,9 @@ add_definitions(${PCL_DEFINITIONS})
 
 include_directories ("${PROJECT_SOURCE_DIR}")
 
-add_executable (tracker tracker.cpp track_manager_color.cpp model_builder.cpp
+add_executable (evaluate_tracking evaluate_tracking.cpp track_manager_color.cpp model_builder.cpp
   precision_tracker.cpp model_builder.cpp motion_model.cpp
   adh_tracker3d.cpp down_sampler.cpp scored_transform.cpp
   density_grid_tracker.cpp lf_rgbd_6d.cpp high_res_timer.cpp
   alignment_evaluator.cpp)
-target_link_libraries (tracker ${PCL_LIBRARIES})
+target_link_libraries (evaluate_tracking ${PCL_LIBRARIES})
