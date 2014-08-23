@@ -22,6 +22,7 @@ struct TrackResults {
   std::vector<bool> ignore_frame;
 };
 
+// Get the ground-truth velocities.
 void getGTVelocities(const string& gt_folder, const int track_num,
                      std::vector<double>* gt_velocities) {
   string filename = gt_folder + "/track%dgt.txt";
@@ -50,6 +51,7 @@ void computeErrorStatistics(const std::vector<double>& errors) {
 
   size_t num_frames = errors.size();
 
+  // Compute the root-mean-square error.
   for (size_t i = 0; i < num_frames; ++i) {
     sum_sq += pow(errors[i], 2);
   }
@@ -104,6 +106,7 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
   computeErrorStatistics(errors);
 }
 
+// Filter to only evaluate on objects within a given distance (in meters).
 void getWithinDistance(
     const track_manager_color::TrackManagerColor& track_manager,
     const double max_distance, std::vector<bool>& filter) {
