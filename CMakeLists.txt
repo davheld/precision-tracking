@@ -14,13 +14,32 @@ include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-#add_library(track_manager_color track_manager_color.h track_manager_color.cpp)
+include_directories (include)
 
-include_directories ("${PROJECT_SOURCE_DIR}")
+add_library (precision_tracker
+  src/track_manager_color.cpp
+  src/tracker.cpp
+  src/precision_tracker.cpp
+  src/motion_model.cpp
+  src/adh_tracker3d.cpp
+  src/down_sampler.cpp
+  src/scored_transform.cpp
+  src/density_grid_evaluator.cpp
+  src/lf_rgbd_6d_evaluator.cpp
+  src/high_res_timer.cpp
+  src/alignment_evaluator.cpp
 
-add_executable (test_tracking test_tracking.cpp track_manager_color.cpp
-  tracker.cpp precision_tracker.cpp motion_model.cpp
-  adh_tracker3d.cpp down_sampler.cpp scored_transform.cpp
-  density_grid_evaluator.cpp lf_rgbd_6d_evaluator.cpp high_res_timer.cpp
-  alignment_evaluator.cpp)
-target_link_libraries (test_tracking ${PCL_LIBRARIES})
+  include/track_manager_color.h
+  include/tracker.h
+  include/precision_tracker.h
+  include/motion_model.h
+  include/adh_tracker3d.h
+  include/down_sampler.h
+  include/scored_transform.h
+  include/density_grid_evaluator.h
+  include/lf_rgbd_6d_evaluator.h
+  include/high_res_timer.h
+  include/alignment_evaluator.h)
+
+add_executable (test_tracking test_tracking.cpp)
+target_link_libraries (test_tracking ${PCL_LIBRARIES} precision_tracker)
