@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+project(tracker)
+
 if (NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type selected, default to Release")
     set(CMAKE_BUILD_TYPE "Release")
   endif()
-
-project(tracker)
 
 set (PCL_DIR /home/davheld/code/pcl-trunk/release/share/pcl-1.7)
 find_package(PCL 1.2 REQUIRED)

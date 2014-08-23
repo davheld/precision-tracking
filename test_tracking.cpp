@@ -7,6 +7,7 @@
 
 #include <string>
 #include <cstdio>
+#include <sstream>
 
 #include "track_manager_color.h"
 #include "tracker.h"
@@ -199,13 +200,15 @@ void find_bad_frames(const track_manager_color::TrackManagerColor& track_manager
 void track(Tracker* tracker,
            const track_manager_color::TrackManagerColor& track_manager,
            std::vector<TrackResults>* velocity_estimates) {
-  HighResTimer hrt("Total time for tracking");
-  hrt.start();
-
   int total_num_frames = 0;
 
   const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
       track_manager.tracks_;
+
+  std::ostringstream hrt_title_stream;
+  hrt_title_stream << "Total time for tracking " << tracks.size() << " objects";
+  HighResTimer hrt(hrt_title_stream.str());
+  hrt.start();
 
   // Iterate over all tracks.
   for (size_t i = 0; i < tracks.size(); ++i) {
