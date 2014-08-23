@@ -56,7 +56,7 @@ void computeErrorStatistics(const std::vector<double>& errors) {
 
   const double rms_error = sqrt(sum_sq / errors.size());
 
-  printf("RMS error: %lf\n", rms_error);
+  printf("RMS error: %lf m/s\n", rms_error);
 }
 
 void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
@@ -75,11 +75,6 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
 
     std::vector<double> gt_velocities;
     getGTVelocities(gt_folder, track_num, &gt_velocities);
-
-    if (track_results.estimated_velocities.size() != gt_velocities.size()) {
-      //printf("Error: estimated velocities != gt_velocities; %zu != %zu\n",
-      //       track_results.estimated_velocities.size(), gt_velocities.size());
-    }
 
     int skipped = 0;
 
