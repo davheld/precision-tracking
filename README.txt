@@ -32,6 +32,31 @@ At the top of your file, add:
 
 When you want to get a velocity estimate, add this code:
 
-Tracker precision_tracker;
-Eigen::Vector3f estimated_velocity;
-tracker->addPoints(points, timestamp, centroid, &estimated_velocity);
+  Tracker precision_tracker;
+  Eigen::Vector3f estimated_velocity;
+  tracker->addPoints(points, timestamp, sensor_horizontal_resolution,
+                     sensor_vertical_resolution, &estimated_velocity);
+
+where:
+points = the currently observed points for the object that you wish to track
+timestamp = the time that these points were observed
+sensor_horizontal_resolution = the horizontal resolution of the sensor
+  for an object at distance observed
+sensor_vertical_resolution = the vertical resolution of the sensor
+  for an object at distance observed
+estimated_velocity = the estimated translational velocity.  The tracker
+  only outputs the estimated horizontal velocity - vertical motion and
+  rotation are not currently estimated.
+
+The horizontal and vertical resolution depend on the sensor that is used.
+For the 64-beam Velodyne, given the horizontal distance from the sensor
+to the tracked object, the sensor resolution can be computed as:
+
+  const double velodyne_horizontal_res =
+      2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+
+  // The vertical resolution for the 64-beam Velodyne is
+  // 2.2 * horizontal resolution.
+  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
+
+
