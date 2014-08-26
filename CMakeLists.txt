@@ -7,7 +7,6 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
   endif()
 
-set (PCL_DIR /home/davheld/code/pcl-trunk/release/share/pcl-1.7)
 find_package(PCL 1.2 REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
