@@ -30,7 +30,8 @@ public:
   void track(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& previousModel,
-      const double horizontal_distance,
+      const double sensor_horizontal_resolution,
+      const double sensor_vertical_resolution,
       const MotionModel& motion_model,
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms);
 

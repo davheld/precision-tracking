@@ -7,7 +7,6 @@
 
 #include "precision_tracker.h"
 
-#include <boost/math/constants/constants.hpp>
 #include <pcl/common/common.h>
 #include <pcl/common/centroid.h>
 
@@ -45,8 +44,6 @@ const double kInitialXYSamplingResolution = 1;
 // Do not sample in the z-direction - assume minimal vertical motion.
 const double kInitialZSamplingResolution = 0;
 
-const double pi = boost::math::constants::pi<double>();
-
 using std::pair;
 using std::max;
 
@@ -78,7 +75,8 @@ PrecisionTracker::~PrecisionTracker() {
 void PrecisionTracker::track(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
-    const double horizontal_distance,
+    const double sensor_horizontal_resolution_actual,
+    const double sensor_vertical_resolution_actual,
     const MotionModel& motion_model,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
   // Estimate the search range for alignment.
@@ -90,7 +88,8 @@ void PrecisionTracker::track(
   // Compute the centroid.
   Eigen::Vector4f current_points_centroid_4d;
   pcl::compute3DCentroid (*current_points, current_points_centroid_4d);
-  const Eigen::Vector3f current_points_centroid = current_points_centroid_4d.head(3);
+  const Eigen::Vector3f current_points_centroid =
+      current_points_centroid_4d.head(3);
 
   // Down-sample the previous points.
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previous_model_downsampled(
@@ -110,16 +109,11 @@ void PrecisionTracker::track(
   down_sampler_.downSamplePoints(
         current_points, kCurrFrameDownsample, down_sampled_current);
 
-  // Compute the sensor horizontal resolution
-  const double velodyne_horizontal_res_actual =
-      2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
-
   // The effective resolution = resolution / downsample factor.
-  const double velodyne_horizontal_res =
-      velodyne_horizontal_res_actual / down_sample_factor_prev;
-
-  // The vertical resolution for the Velodyne is 2.2 * horizontal resolution.
-  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
+  const double sensor_horizontal_res =
+      sensor_horizontal_resolution_actual / down_sample_factor_prev;
+  const double sensor_vertical_res =
+      sensor_vertical_resolution_actual / down_sample_factor_prev;
 
   // Align the previous points to the current points using the annealed
   // dynamic histogram trakcer.
@@ -128,7 +122,7 @@ void PrecisionTracker::track(
         xRange, yRange, zRange,
         down_sampled_current, previous_model_downsampled,
         current_points_centroid, motion_model,
-        velodyne_horizontal_res, velodyne_vertical_res,
+        sensor_horizontal_res, sensor_vertical_res,
         alignment_evaluator_, scored_transforms);
 }
 

@@ -32,7 +32,8 @@ public:
   void addPoints(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const double timestamp,
-      const Eigen::Vector3f& centroid,
+      const double sensor_horizontal_resolution,
+      const double sensor_vertical_resolution,
       Eigen::Vector3f* estimated_velocity);
 
 private:

@@ -9,11 +9,19 @@
 #include <cstdio>
 #include <sstream>
 
+#include <boost/math/constants/constants.hpp>
+
 #include "track_manager_color.h"
 #include "tracker.h"
 #include "high_res_timer.h"
 
 using std::string;
+
+namespace {
+
+const double pi = boost::math::constants::pi<double>();
+
+} // namespace
 
 // Structure for storing estimated velocities for each track.
 struct TrackResults {
@@ -195,6 +203,28 @@ void find_bad_frames(const track_manager_color::TrackManagerColor& track_manager
   }
 }
 
+// Computes the sensor resolution for an object at a given distance,
+// for the 64-beam Velodyne.
+void getSensorResolution(const Eigen::Vector3f& centroid_local_coordinates,
+                         double* sensor_horizontal_res,
+                         double* sensor_vertical_res) {
+  // Get the distance to the tracked object.
+  const double horizontal_distance =
+      sqrt(pow(centroid_local_coordinates(0), 2) +
+           pow(centroid_local_coordinates(1), 2));
+
+  // Compute the sensor horizontal resolution
+  const double velodyne_horizontal_res =
+      2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+
+  // The vertical resolution for the 64-beam Velodyne is
+  // 2.2 * horizontal resolution.
+  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
+
+  *sensor_horizontal_res = velodyne_horizontal_res;
+  *sensor_vertical_res = velodyne_vertical_res;
+}
+
 void track(Tracker* tracker,
            const track_manager_color::TrackManagerColor& track_manager,
            std::vector<TrackResults>* velocity_estimates) {
@@ -226,9 +256,17 @@ void track(Tracker* tracker,
     for (size_t j = 0; j < frames.size(); ++j) {
       boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
 
+      // Get the sensor resolution.
+      double sensor_horizontal_resolution;
+      double sensor_vertical_resolution;
+      getSensorResolution(frame->getCentroid(), &sensor_horizontal_resolution,
+                          &sensor_vertical_resolution);
+
       // Track object.
       Eigen::Vector3f estimated_velocity;
-      tracker->addPoints(frame->cloud_, frame->timestamp_, frame->getCentroid(),
+      tracker->addPoints(frame->cloud_, frame->timestamp_,
+                         sensor_horizontal_resolution,
+                         sensor_vertical_resolution,
                          &estimated_velocity);
 
       // The first time we see this object, we don't have a velocity yet.

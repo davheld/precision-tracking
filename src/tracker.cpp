@@ -53,7 +53,8 @@ void Tracker::clear(){
 void Tracker::addPoints(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const double current_timestamp,
-    const Eigen::Vector3f& centroid,
+    const double sensor_horizontal_resolution,
+    const double sensor_vertical_resolution,
     Eigen::Vector3f* estimated_velocity) {
   // Do not align if there are no points.
   if (current_points->size() == 0){
@@ -71,16 +72,12 @@ void Tracker::addPoints(
     // Propogate the motion model forward to estimate the new position.
     motion_model_->propagate(timestamp_diff);
 
-    // Get the distance to the tracked object.
-    //Eigen::Vector4d velo_centroid = frame_helper.getVeloCentroid();
-    const double horizontal_distance =
-        sqrt(pow(centroid(0), 2) + pow(centroid(1), 2));
-
     if (use_precision_tracker_) {
       // Align.
       ScoredTransforms<ScoredTransformXYZ> scored_transforms;
-      precision_tracker_->track(current_points, previousModel_,
-          horizontal_distance, *motion_model_, &scored_transforms);
+      precision_tracker_->track(
+            current_points, previousModel_, sensor_horizontal_resolution,
+            sensor_vertical_resolution, *motion_model_, &scored_transforms);
 
       motion_model_->addTransformsWeightedGaussian(scored_transforms,
                                                   timestamp_diff);
