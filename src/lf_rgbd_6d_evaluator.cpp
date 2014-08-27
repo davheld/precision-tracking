@@ -15,6 +15,8 @@
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
 
+#include <boost/math/constants/constants.hpp>
+
 using std::max;
 using std::min;
 using std::pair;
@@ -28,9 +30,6 @@ namespace {
 const double kSearchTreeEpsilon = 2;
 
 // -----Color Parameters----
-
-// Whether to use color in our measurememtn model.
-const bool kUseColor = true;
 
 // Whether to use two colors in our measurement model.
 const bool kTwoColors = false;
@@ -58,15 +57,20 @@ const double kColorThreshFactor = 1;
 // 1: Use (R + G + B) / 3.
 const int kColorSpace = 0;
 
+// --- Constants ---
+
+const double pi = boost::math::constants::pi<double>();
+
 } // namespace
 
 
-LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator()
+LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator(const double use_color)
     : searchTree_(false),  //  //By setting sorted to false,
                                 // the radiusSearch operations will be faster.
       max_nn_(1),
       nn_indices_(max_nn_),
       nn_sq_dists_(max_nn_),
+      use_color_(use_color),
       color_exp_factor1_(-1.0 / kValueSigma1),
       color_exp_factor2_(-1.0 / kValueSigma2)
 {
@@ -256,6 +260,38 @@ double LF_RGBD_6D_Evaluator::getLogProbability(
   return log_prob;
 }
 
+double LF_RGBD_6D_Evaluator::getPointProbability(
+    const pcl::PointXYZRGB& point) {
+  // Get the distance to the tracked object.
+  const double horizontal_distance = sqrt(pow(point.x, 2) + pow(point.y, 2));
+
+  // The horizontal resolution for the 64-beam Velodyne spinning at 10 Hz
+  // is 0.18 degrees.
+  const double velodyne_horizontal_angular_res = 0.18;
+
+  // There are 64 beams spanning 26.8 vertical degrees, so the average spacing
+  // between each beam is computed as follows.
+  const double velodyne_vertical_angular_res = 26.8 / 63;
+
+  // We convert the angular resolution to meters for a given range.
+  const double sensor_horizontal_resolution =
+      2 * horizontal_distance *
+      tan(velodyne_horizontal_angular_res / 2.0 * pi / 180.0);
+  const double sensor_vertical_resolution =
+      2 * horizontal_distance *
+      tan(velodyne_vertical_angular_res / 2.0 * pi / 180.0);
+
+  // Initialize variables for tracking grid.
+  const size_t num_current_points = 1;
+  const double xy_sampling_resolution = 0;
+  const double z_sampling_resolution = 0;
+  init(xy_sampling_resolution, z_sampling_resolution,
+       sensor_horizontal_resolution, sensor_vertical_resolution,
+       num_current_points);
+
+  get_log_prob(point);
+}
+
 double LF_RGBD_6D_Evaluator::get_log_prob(const pcl::PointXYZRGB& current_pt) {
   // Find the nearest neighbor.
   searchTree_.nearestKSearch(current_pt, max_nn_, nn_indices_, nn_sq_dists_);
@@ -272,7 +308,7 @@ double LF_RGBD_6D_Evaluator::get_log_prob(const pcl::PointXYZRGB& current_pt) {
 
   // Compute the point match probability, incorporating color if necessary.
   double point_prob;
-  if (kUseColor) {
+  if (use_color_) {
     point_prob = computeColorProb(prev_pt, current_pt,
                                   point_match_prob_spatial_i);
   } else {
@@ -291,9 +327,9 @@ double LF_RGBD_6D_Evaluator::computeColorProb(const pcl::PointXYZRGB& prev_pt,
   const double factor1 = smoothing_factor_ / (smoothing_factor_ + 1);
 
   double smoothing_factor;
-  if (kUseColor && !kTwoColors) {
+  if (use_color_ && !kTwoColors) {
     smoothing_factor = factor1 / 255;
-  } else if (kUseColor && kTwoColors) {
+  } else if (use_color_ && kTwoColors) {
     smoothing_factor = factor1 / pow(255, 2);
   } else {
     smoothing_factor = smoothing_factor_;

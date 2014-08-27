@@ -50,15 +50,18 @@ public:
 
 class LF_RGBD_6D_Evaluator : public AlignmentEvaluator {
 public:
-  LF_RGBD_6D_Evaluator ();
+  LF_RGBD_6D_Evaluator (const double use_color);
   virtual ~LF_RGBD_6D_Evaluator();
 
   void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);
 
+  double getPointProbability(
+      const pcl::PointXYZRGB& point);
+
   // Score each ofthe xyz transforms.
   void score6DTransforms(
       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& current_points,
-      const Eigen::Vector3f &current_points_centroid,
+      const Eigen::Vector3f& current_points_centroid,
       const double xy_sampling_resolution,
       const double z_sampling_resolution,
       const double sensor_horizontal_resolution,
@@ -117,6 +120,9 @@ private:
   // Vector to store the result of the nearest neighbor search.
   std::vector<int> nn_indices_;
   std::vector<float> nn_sq_dists_;
+
+  // Whether to use color in the measurement model.
+  bool use_color_;
 
   // Color parameters.
   double color_exp_factor1_;

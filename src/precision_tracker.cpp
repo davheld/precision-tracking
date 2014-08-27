@@ -61,7 +61,7 @@ PrecisionTracker::PrecisionTracker(const bool use_color)
     use_color_(use_color)
 {
   if (use_color) {
-    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator);
+    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator(true));
   } else {
     alignment_evaluator_.reset(new DensityGridEvaluator);
   }
