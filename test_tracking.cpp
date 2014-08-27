@@ -213,13 +213,21 @@ void getSensorResolution(const Eigen::Vector3f& centroid_local_coordinates,
       sqrt(pow(centroid_local_coordinates(0), 2) +
            pow(centroid_local_coordinates(1), 2));
 
-  // Compute the sensor horizontal resolution
-  const double velodyne_horizontal_res =
-      2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
+  // The horizontal resolution for the 64-beam Velodyne spinning at 10 Hz
+  // is 0.18 degrees.
+  const double velodyne_horizontal_angular_res = 0.18;
 
-  // The vertical resolution for the 64-beam Velodyne is
-  // 2.2 * horizontal resolution.
-  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
+  // There are 64 beams spanning 26.8 vertical degrees, so the average spacing
+  // between each beam is computed as follows.
+  const double velodyne_vertical_angular_res = 26.8 / 63;
+
+  // We convert the angular resolution to meters for a given range.
+  const double velodyne_horizontal_res =
+      2 * horizontal_distance *
+      tan(velodyne_horizontal_angular_res / 2.0 * pi / 180.0);
+  const double velodyne_vertical_res =
+      2 * horizontal_distance *
+      tan(velodyne_vertical_angular_res / 2.0 * pi / 180.0);
 
   *sensor_horizontal_res = velodyne_horizontal_res;
   *sensor_vertical_res = velodyne_vertical_res;

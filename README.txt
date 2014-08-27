@@ -46,17 +46,27 @@ sensor_vertical_resolution = the vertical resolution of the sensor
   for an object at distance observed
 estimated_velocity = the estimated translational velocity.  The tracker
   only outputs the estimated horizontal velocity - vertical motion and
-  rotation are not currently estimated.
+  rotation are not currently estimated.  The velocity estimate is 0 for the
+  first frame in which an object is observed and is the estimated velocity
+  thereafter.
 
 The horizontal and vertical resolution depend on the sensor that is used.
-For the 64-beam Velodyne, given the horizontal distance from the sensor
-to the tracked object, the sensor resolution can be computed as:
+For the 64-beam Velodyne spinning at 10 Hz, given the horizontal distance from
+the sensor to the tracked object, the sensor resolution can be computed as
+follows (taken from test_tracking.cpp):
 
+  // The horizontal resolution for the 64-beam Velodyne spinning at 10 Hz
+  // is 0.18 degrees.
+  const double velodyne_horizontal_angular_res = 0.18;
+
+  // There are 64 beams spanning 26.8 vertical degrees, so the average spacing
+  // between each beam is computed as follows.
+  const double velodyne_vertical_angular_res = 26.8 / 63;
+
+  // We convert the angular resolution to meters for a given range.
   const double velodyne_horizontal_res =
-      2 * horizontal_distance * tan(.18 / 2.0 * pi / 180.0);
-
-  // The vertical resolution for the 64-beam Velodyne is
-  // 2.2 * horizontal resolution.
-  const double velodyne_vertical_res = 2.2 * velodyne_horizontal_res;
-
-
+      2 * horizontal_distance *
+      tan(velodyne_horizontal_angular_res / 2.0 * pi / 180.0);
+  const double velodyne_vertical_res =
+      2 * horizontal_distance *
+      tan(velodyne_vertical_angular_res / 2.0 * pi / 180.0);
