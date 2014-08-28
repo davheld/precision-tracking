@@ -34,7 +34,8 @@ public:
       const double timestamp,
       const double sensor_horizontal_resolution,
       const double sensor_vertical_resolution,
-      Eigen::Vector3f* estimated_velocity);
+      Eigen::Vector3f* estimated_velocity,
+      double* alignment_probability);
 
 private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previousModel_;

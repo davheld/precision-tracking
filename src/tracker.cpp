@@ -55,7 +55,8 @@ void Tracker::addPoints(
     const double current_timestamp,
     const double sensor_horizontal_resolution,
     const double sensor_vertical_resolution,
-    Eigen::Vector3f* estimated_velocity) {
+    Eigen::Vector3f* estimated_velocity,
+    double* alignment_probability) {
   // Do not align if there are no points.
   if (current_points->size() == 0){
     printf("No points - cannot align.\n");
@@ -96,13 +97,13 @@ void Tracker::addPoints(
 
       motion_model_->addTransformsWeightedGaussian(scored_transforms,
                                                   timestamp_diff);
+      ScoredTransformXYZ best_transform;
+      scored_transforms.findBest(&best_transform, alignment_probability);
+
       if (use_mean_) {
         Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
         *estimated_velocity = mean_velocity;
       } else {
-        ScoredTransformXYZ best_transform;
-        scored_transforms.findBest(&best_transform);
-
         Eigen::Vector3f best_displacement;
         best_transform.getEigen(&best_displacement);
 

@@ -165,7 +165,8 @@ public:
 
   // Finds the highest scoring transform in terms of probability density
   // (probability per unit volume), which is the mode of the distribution.
-  void findBest(TransformType* best_transform) const;
+  void findBest(TransformType* best_transform,
+                double* best_probability_density) const;
 
   // Append scored transforms to the end of the current list.
   void appendScoredTransforms(const ScoredTransforms& scored_transforms) {
@@ -224,18 +225,21 @@ private:
 
 template <class TransformType>
 void ScoredTransforms<TransformType>::findBest(
-    TransformType* best_transform) const {
+    TransformType* best_transform, double* best_probability_density) const {
   int best_transform_index = -1;
   double best_score = -std::numeric_limits<double>::max();
 
+  const std::vector<double>& normalized_probs = getNormalizedProbs();
+
   for (size_t i = 0; i < scored_transforms_.size(); ++i) {
+    const double prob = normalized_probs[i];
+
     // Compute the unnormalized log probability density of this transform.
-    const double score = scored_transforms_[i].getUnnormalizedLogProb() -
-        log(scored_transforms_[i].getVolume());
+    const double prob_density = prob / scored_transforms_[i].getVolume();
 
     // Find the transform with the highest unnormalized log probability density.
-    if (score > best_score) {
-      best_score = score;
+    if (prob_density > best_score) {
+      best_score = prob_density;
       best_transform_index = i;
     }
   }
@@ -246,6 +250,7 @@ void ScoredTransforms<TransformType>::findBest(
   }
 
   *best_transform = scored_transforms_[best_transform_index];
+  *best_probability_density = best_score;
 }
 
 struct KahanAccumulation
