@@ -72,12 +72,27 @@ void Tracker::addPoints(
     // Propogate the motion model forward to estimate the new position.
     motion_model_->propagate(timestamp_diff);
 
+    // Always align the smaller points to the bigger points.
+    const bool flip = current_points->size() > previousModel_->size();
+
     if (use_precision_tracker_) {
       // Align.
       ScoredTransforms<ScoredTransformXYZ> scored_transforms;
-      precision_tracker_->track(
-            current_points, previousModel_, sensor_horizontal_resolution,
-            sensor_vertical_resolution, *motion_model_, &scored_transforms);
+      if (!flip) {
+          motion_model_->setFlip(false);
+          // Current points are smaller - align current points to previous.
+          precision_tracker_->track(
+                current_points, previousModel_, sensor_horizontal_resolution,
+                sensor_vertical_resolution, *motion_model_, &scored_transforms);
+      } else {
+          motion_model_->setFlip(true);
+
+          // Previous points are smaller - align previous points to current.
+          precision_tracker_->track(
+                previousModel_, current_points, sensor_horizontal_resolution,
+                sensor_vertical_resolution, *motion_model_, &scored_transforms);
+      }
+
 
       motion_model_->addTransformsWeightedGaussian(scored_transforms,
                                                   timestamp_diff);
@@ -91,7 +106,7 @@ void Tracker::addPoints(
         Eigen::Vector3f best_displacement;
         best_transform.getEigen(&best_displacement);
 
-        *estimated_velocity = best_displacement / timestamp_diff;
+        *estimated_velocity = (flip ? -1 : 1) * best_displacement / timestamp_diff;
       }
     } else {
       // Track using the centroid-based Kalman filter.

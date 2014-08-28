@@ -32,12 +32,6 @@ const bool stochastic_downsample = false;
 // the vertical motion is small).
 const double maxZ = 0;
 
-// We expect the actual motion of the previous centroid to be
-// this far off from the measured displacement of the centroid (due to
-// occlusions and viewpoint changes).  Roughly, we set this to be equal
-// to half of the expected size of the tracked object.
-const double maxXY = 2;
-
 // Start with a very coarse xy sampling for efficiency.
 const double kInitialXYSamplingResolution = 1;
 

@@ -31,10 +31,11 @@ const double kMotionMinProb = 1e-4;
 } // namespace
 
 MotionModel::MotionModel()
-  :pdf_constant_(1),
-   min_score_(kMotionMinProb),
-   valid_eigen_vectors_(false),
-   valid_(false)
+  : pdf_constant_(1),
+    min_score_(kMotionMinProb),
+    valid_eigen_vectors_(false),
+    valid_(false),
+    flip_(1)
 {
   // We assume that, at each time step, we independently sample an acceleration
   // with 0 mean and covariance of covariance_propagation_uncertainty_.
@@ -105,9 +106,9 @@ Eigen::Matrix3d MotionModel::computeCovarianceVelocity(
     const double prob = probs[i];
 
     // Compute the difference from the mean.
-    const double x_velo_diff = (scored_transform.getX() / time_diff) - x_velocity_mean;
-    const double y_velo_diff = (scored_transform.getY() / time_diff) - y_velocity_mean;
-    const double z_velo_diff = (scored_transform.getZ() / time_diff) - z_velocity_mean;
+    const double x_velo_diff = (flip_ * scored_transform.getX() / time_diff) - x_velocity_mean;
+    const double y_velo_diff = (flip_ * scored_transform.getY() / time_diff) - y_velocity_mean;
+    const double z_velo_diff = (flip_ * scored_transform.getZ() / time_diff) - z_velocity_mean;
 
     // Compute the weighted contribution to the covaraince.
     covariance_velocity(0,0) += prob * pow(x_velo_diff, 2);
@@ -154,9 +155,9 @@ Eigen::Vector3d MotionModel::computeMeanVelocity(
 
     prob_sum += prob;
 
-    mean_delta_position.x += scored_transform.getX() * prob;
-    mean_delta_position.y += scored_transform.getY() * prob;
-    mean_delta_position.z += scored_transform.getZ() * prob;
+    mean_delta_position.x += flip_ * scored_transform.getX() * prob;
+    mean_delta_position.y += flip_ * scored_transform.getY() * prob;
+    mean_delta_position.z += flip_ * scored_transform.getZ() * prob;
   }
 
   // Normalize, and divide by time to get the velocity.
@@ -183,10 +184,10 @@ double MotionModel::computeScore(const TransformComponents& components) const {
   if (!valid_) {
 		return 1;
   } else {
-		Eigen::Vector3d x(components.x, components.y, components.z);
+    Eigen::Vector3d x(components.x, components.y, components.z);
 
     // Compute the probability from the normal distribution.
-    Eigen::Vector3d diff = x - mean_delta_position_;
+    Eigen::Vector3d diff = flip_ * x - mean_delta_position_;
     double log_prob =
         -0.5 * diff.transpose() * covariance_delta_position_inv_ * diff;
     double prob = max(pdf_constant_ * exp(log_prob), min_score_);

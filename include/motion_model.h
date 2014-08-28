@@ -49,8 +49,8 @@ public:
 
 	bool valid() const { return valid_; }
 
-	const Eigen::Vector3d& get_mean_delta_position() const {
-	  return mean_delta_position_;
+    Eigen::Vector3d get_mean_delta_position() const {
+        return mean_delta_position_;
 	}
 
 	const Eigen::Matrix3d get_covariance_delta_position() const {
@@ -61,9 +61,11 @@ public:
     return covariance_delta_position_inv_;
   }
 
-	double get_min_score() {
-	  return min_score_;
-	}
+  double get_min_score() {
+    return min_score_;
+  }
+
+  void setFlip(const bool flip) { if (flip) { flip_ = -1; } else { flip_ = 1; } }
 
 private:
   Eigen::Vector3d computeMeanVelocity(
@@ -92,6 +94,9 @@ private:
 	Eigen::Matrix3d covariance_propagation_uncertainty_;
 
 	bool valid_;
+
+    // Whether to flip the output of the motion model (-1 to flip, 1 not to flip).
+    int flip_;
 };
 
 #endif /* MOTION_MODEL_H_ */
