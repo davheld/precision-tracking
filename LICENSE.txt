@@ -1,0 +1,33 @@
+STANFORD ACADEMIC SOFTWARE LICENSE FOR 
+Stanford Docket S14-219 “ “Robust Anytime Tracking Combining 3D Shape, Color, and Motion with Annealed Dynamic Histograms”
+
+Stanford has an assignment to “Robust Anytime Tracking Combining 3D Shape, Color, and Motion with Annealed Dynamic Histograms” which was developed in the laboratories of Professors Sebastian Thrun and Silvio Savarese, and is described in Stanford Docket S14-219 and provisional patent 62/009,238 filed June 8, 2014.
+
+STANFORD grants a royalty-free, nonexclusive, and nontransferable academic license to use the Software furnished hereunder, upon the terms and conditions set out below.
+
+Redistributions of source code must retain this license.
+
+Redistributions in binary form must reproduce this license in the documentation and/or other materials provided with the distribution.
+
+The Software is a research tool still in the development stage and that it is being supplied as is, without any accompanying services, support or improvements from STANFORD. STANFORD makes no representations and extends no warranties of any kind, either express or implied.
+
+The Software may be used solely for internal academic non-commercial purposes and the recipient shall not distribute or transfer it to another location or to any other person without prior written permission from STANFORD.  For a commercial license to this software, please contact the Stanford Office of Technology and Licensing at info@otlmail.stanford.edu.
+
+RECIPIENT may make modifications to the Software and integrate Software into RECIPIENT’s own software.
+
+RECIPIENT will indemnify, hold harmless, and defend STANFORD against any claim of any kind arising out of or related to the exercise of any rights granted under this license or the breach of this license.
+
+Title and copyright to the Software and any derivatives and any associated documentation shall at all times remain with STANFORD.
+
+Scientific results produced using this software shall acknowledge its use from the authors and cite the following articles:
+
+David Held, Jesse Levinson, Sebastian Thrun, Silvio Savarese. 
+Combining 3D Shape, Color, and Motion for Robust Anytime Tracking. 
+Robotics: Science and Systems (RSS), 2014
+
+David Held, Jesse Levinson, Sebastian Thrun. 
+Precision Tracking with Sparse 3D and Dense Color 2D Data. 
+International Conference on Robotics and Automation (ICRA), 2013
+
+
+
