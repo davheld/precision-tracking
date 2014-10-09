@@ -181,6 +181,14 @@ void DensityGridEvaluator::computeDensityGrid(
     const int y_index = round(pt.y / xy_grid_step_ + y_offset);
     const int z_index = round(pt.z / z_grid_step_ + z_offset);
 
+    // Add limit checks to make sure we don't segfault
+    if (x_index < 1 || x_index > xSize_ - 2) {
+      continue;
+    }
+    if (y_index < 1 || y_index > ySize_ - 2) {
+      continue;
+    }
+
     // Spill the probability density into neighboring regions as a Guassian
     // (but not to the borders, which represent the empty space around the
     // tracked object)
