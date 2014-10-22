@@ -5,9 +5,11 @@
  *      Author: davheld
  */
 
-#include "tracker.h"
 
 #include <pcl/common/centroid.h>
+
+#include <precision_tracking/tracker.h>
+
 
 namespace precision_tracking {
 

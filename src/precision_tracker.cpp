@@ -5,14 +5,15 @@
  *      Author: davheld
  */
 
-#include "precision_tracker.h"
 
 #include <pcl/common/common.h>
 #include <pcl/common/centroid.h>
 
-#include "down_sampler.h"
-#include "density_grid_evaluator.h"
-#include "lf_rgbd_6d_evaluator.h"
+#include <precision_tracking/down_sampler.h>
+#include <precision_tracking/density_grid_evaluator.h>
+#include <precision_tracking/lf_rgbd_6d_evaluator.h>
+#include <precision_tracking/precision_tracker.h>
+
 
 namespace precision_tracking {
 

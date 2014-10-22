@@ -13,16 +13,16 @@
  *
  */
 
-#ifndef DENSITY_GRID_EVALUATOR_H_
-#define DENSITY_GRID_EVALUATOR_H_
+#ifndef __PRECISION_TRACKING__DENSITY_GRID_EVALUATOR_H_
+#define __PRECISION_TRACKING__DENSITY_GRID_EVALUATOR_H_
 
 #include <vector>
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-#include "scored_transform.h"
-#include "alignment_evaluator.h"
+#include <precision_tracking/scored_transform.h>
+#include <precision_tracking/alignment_evaluator.h>
 
 
 struct ScoredTransform;
@@ -87,5 +87,5 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* DENSITY_GRID_EVALUATOR_H_ */
+#endif /* __PRECISION_TRACKING__DENSITY_GRID_EVALUATOR_H_ */
 

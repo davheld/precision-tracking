@@ -5,14 +5,14 @@
  *      Author: davheld
  */
 
-#ifndef MOTION_MODEL_H_
-#define MOTION_MODEL_H_
+#ifndef __PRECISION_TRACKING__MOTION_MODEL_H_
+#define __PRECISION_TRACKING__MOTION_MODEL_H_
 
 #include <vector>
 
 #include <Eigen/Eigen>
 
-#include "scored_transform.h"
+#include <precision_tracking/scored_transform.h>
 
 namespace precision_tracking {
 
@@ -103,4 +103,4 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* MOTION_MODEL_H_ */
+#endif /* __PRECISION_TRACKING__MOTION_MODEL_H_ */

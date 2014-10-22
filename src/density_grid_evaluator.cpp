@@ -5,12 +5,14 @@
  *      Author: davheld
  */
 
-#include "density_grid_evaluator.h"
 
 #include <stdlib.h>
 #include <numeric>
 
 #include <pcl/common/common.h>
+
+#include <precision_tracking/density_grid_evaluator.h>
+
 
 namespace precision_tracking {
 

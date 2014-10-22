@@ -5,14 +5,14 @@
  *      Author: davheld
  */
 
-#ifndef TRACKER_H_
-#define TRACKER_H_
+#ifndef __PRECISION_TRACKING__TRACKER_H_
+#define __PRECISION_TRACKING__TRACKER_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-#include "motion_model.h"
-#include "precision_tracker.h"
+#include <precision_tracking/motion_model.h>
+#include <precision_tracking/precision_tracker.h>
 
 namespace precision_tracking {
 
@@ -63,4 +63,4 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* TRACKER_H_ */
+#endif /* __PRECISION_TRACKING__TRACKER_H_ */

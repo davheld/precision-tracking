@@ -11,9 +11,9 @@
 
 #include <boost/math/constants/constants.hpp>
 
-#include "track_manager_color.h"
-#include "tracker.h"
-#include "high_res_timer.h"
+#include <precision_tracking/track_manager_color.h>
+#include <precision_tracking/tracker.h>
+#include <precision_tracking/high_res_timer.h>
 
 using std::string;
 

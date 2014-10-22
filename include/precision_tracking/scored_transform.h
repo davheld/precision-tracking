@@ -5,8 +5,8 @@
  *      Author: davheld
  */
 
-#ifndef SCORED_TRANSFORM_H_
-#define SCORED_TRANSFORM_H_
+#ifndef __PRECISION_TRACKING__SCORED_TRANSFORM_H_
+#define __PRECISION_TRACKING__SCORED_TRANSFORM_H_
 
 #include <cstdio>
 #include <vector>
@@ -322,4 +322,4 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
 
 } // namespace precision_tracking
 
-#endif /* SCORED_TRANSFORM_H_ */
+#endif /* __PRECISION_TRACKING__SCORED_TRANSFORM_H_ */

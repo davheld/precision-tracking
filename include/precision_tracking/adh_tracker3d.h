@@ -12,17 +12,17 @@
  *
  */
 
-#ifndef ADH_TRACKER_3D_H_
-#define ADH_TRACKER_3D_H_
+#ifndef __PRECISION_TRACKING__ADH_TRACKER_3D_H_
+#define __PRECISION_TRACKING__ADH_TRACKER_3D_H_
 
 #include <utility>
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-#include "alignment_evaluator.h"
-#include "motion_model.h"
-#include "scored_transform.h"
+#include <precision_tracking/alignment_evaluator.h>
+#include <precision_tracking/motion_model.h>
+#include <precision_tracking/scored_transform.h>
 
 namespace precision_tracking {
 
@@ -76,4 +76,4 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* ADH_TRACKER_3D_H_ */
+#endif /* __PRECISION_TRACKING__ADH_TRACKER_3D_H_ */

@@ -12,16 +12,16 @@
  * Held, et al.
  */
 
-#ifndef LF_RGBD_6D_EVALUATOR_H_
-#define LF_RGBD_6D_EVALUATOR_H_
+#ifndef __PRECISION_TRACKING__LF_RGBD_6D_EVALUATOR_H_
+#define __PRECISION_TRACKING__LF_RGBD_6D_EVALUATOR_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 
-#include "motion_model.h"
-#include "scored_transform.h"
-#include "alignment_evaluator.h"
+#include <precision_tracking/motion_model.h>
+#include <precision_tracking/scored_transform.h>
+#include <precision_tracking/alignment_evaluator.h>
 
 namespace precision_tracking {
 
@@ -134,4 +134,4 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* LF_RGBD_6D_EVALUATOR_H_ */
+#endif /* __PRECISION_TRACKING__LF_RGBD_6D_EVALUATOR_H_ */

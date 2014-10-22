@@ -5,9 +5,10 @@
  *      Author: davheld
  */
 
-#include "motion_model.h"
 
 #include <boost/math/constants/constants.hpp>
+
+#include <precision_tracking/motion_model.h>
 
 using std::max;
 

@@ -5,16 +5,16 @@
  *      Author: davheld
  */
 
-#ifndef PRECISION_TRACKER_H_
-#define PRECISION_TRACKER_H_
+#ifndef __PRECISION_TRACKING__PRECISION_TRACKER_H_
+#define __PRECISION_TRACKING__PRECISION_TRACKER_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-#include "scored_transform.h"
-#include "motion_model.h"
-#include "adh_tracker3d.h"
-#include "down_sampler.h"
+#include <precision_tracking/scored_transform.h>
+#include <precision_tracking/motion_model.h>
+#include <precision_tracking/adh_tracker3d.h>
+#include <precision_tracking/down_sampler.h>
 
 namespace precision_tracking {
 
@@ -60,4 +60,4 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* PRECISION_TRACKER_H_ */
+#endif /* __PRECISION_TRACKING__PRECISION_TRACKER_H_ */

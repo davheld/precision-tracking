@@ -5,10 +5,11 @@
  *      Author: davheld
  */
 
-#include "adh_tracker3d.h"
 
 #include <vector>
 #include <algorithm>
+
+#include <precision_tracking/adh_tracker3d.h>
 
 using std::vector;
 using std::max;

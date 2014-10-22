@@ -6,7 +6,6 @@
  *
  */
 
-#include "lf_rgbd_6d_evaluator.h"
 
 #include <utility>
 #include <vector>
@@ -16,6 +15,9 @@
 #include <pcl/common/transforms.h>
 
 #include <boost/math/constants/constants.hpp>
+
+#include <precision_tracking/lf_rgbd_6d_evaluator.h>
+
 
 using std::max;
 using std::min;

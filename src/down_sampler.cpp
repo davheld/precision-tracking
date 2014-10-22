@@ -5,7 +5,7 @@
  *      Author: davheld
  */
 
-#include "down_sampler.h"
+#include <precision_tracking/down_sampler.h>
 
 namespace precision_tracking {
 

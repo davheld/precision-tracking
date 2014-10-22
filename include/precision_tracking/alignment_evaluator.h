@@ -6,14 +6,14 @@
 * points in the previous and the current frames.
 */
 
-#ifndef ALIGNMENT_EVALUATOR_H
-#define ALIGNMENT_EVALUATOR_H
+#ifndef __PRECISION_TRACKING__ALIGNMENT_EVALUATOR_H
+#define __PRECISION_TRACKING__ALIGNMENT_EVALUATOR_H
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
-#include "motion_model.h"
-#include "scored_transform.h"
+#include <precision_tracking/motion_model.h>
+#include <precision_tracking/scored_transform.h>
 
 namespace precision_tracking {
 
@@ -83,4 +83,4 @@ protected:
 
 } // namespace precision_tracking
 
-#endif // ALIGNMENT_EVALUATOR_H
+#endif // __PRECISION_TRACKING__ALIGNMENT_EVALUATOR_H

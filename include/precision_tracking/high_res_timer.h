@@ -1,5 +1,5 @@
-#ifndef HIGH_RES_TIMER_H
-#define HIGH_RES_TIMER_H
+#ifndef __PRECISION_TRACKING__HIGH_RES_TIMER_H
+#define __PRECISION_TRACKING__HIGH_RES_TIMER_H
 
 #include <time.h>
 #include <string>
@@ -55,4 +55,4 @@ public:
 
 } // namespace precision_tracking
 
-#endif // HIGH_RES_TIMER_H
+#endif // __PRECISION_TRACKING__HIGH_RES_TIMER_H

@@ -1,11 +1,12 @@
-#ifndef TRACK_MANAGER_COLOR_H
-#define TRACK_MANAGER_COLOR_H
+#ifndef __PRECISION_TRACKING__TRACK_MANAGER_COLOR_H
+#define __PRECISION_TRACKING__TRACK_MANAGER_COLOR_H
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <float.h>
+
 #include <Eigen/Eigen>
 
 #include <pcl/point_types.h>
@@ -120,4 +121,4 @@ namespace track_manager_color {
 
 } // namespace precision_tracking
    
-#endif //TRACK_MANAGER_COLOR_H
+#endif //__PRECISION_TRACKING__TRACK_MANAGER_COLOR_H

@@ -5,8 +5,8 @@
  *      Author: davheld
  */
 
-#ifndef DOWN_SAMPLER_H_
-#define DOWN_SAMPLER_H_
+#ifndef __PRECISION_TRACKING__DOWN_SAMPLER_H_
+#define __PRECISION_TRACKING__DOWN_SAMPLER_H_
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
@@ -43,4 +43,4 @@ private:
 
 } // namespace precision_tracking
 
-#endif /* DOWN_SAMPLER_H_ */
+#endif /* __PRECISION_TRACKING__DOWN_SAMPLER_H_ */

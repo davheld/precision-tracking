@@ -28,17 +28,17 @@ add_library (precision_tracker
   src/high_res_timer.cpp
   src/alignment_evaluator.cpp
 
-  include/track_manager_color.h
-  include/tracker.h
-  include/precision_tracker.h
-  include/motion_model.h
-  include/adh_tracker3d.h
-  include/down_sampler.h
-  include/scored_transform.h
-  include/density_grid_evaluator.h
-  include/lf_rgbd_6d_evaluator.h
-  include/high_res_timer.h
-  include/alignment_evaluator.h)
+  include/precision_tracking/track_manager_color.h
+  include/precision_tracking/tracker.h
+  include/precision_tracking/precision_tracker.h
+  include/precision_tracking/motion_model.h
+  include/precision_tracking/adh_tracker3d.h
+  include/precision_tracking/down_sampler.h
+  include/precision_tracking/scored_transform.h
+  include/precision_tracking/density_grid_evaluator.h
+  include/precision_tracking/lf_rgbd_6d_evaluator.h
+  include/precision_tracking/high_res_timer.h
+  include/precision_tracking/alignment_evaluator.h)
 
 add_executable (test_tracking test_tracking.cpp)
 target_link_libraries (test_tracking ${PCL_LIBRARIES} precision_tracker)
