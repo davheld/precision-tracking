@@ -8,6 +8,8 @@
 #include <iostream>
 #include <cstdio>
 
+namespace precision_tracking {
+
 //! CLOCK_MONOTONIC_RAW will not be adjusted by NTP.
 //! See man clock_gettime.
 class HighResTimer {
@@ -50,5 +52,7 @@ public:
   ScopedTimer(const std::string& description = "ScopedTimer");
   ~ScopedTimer();
 };
+
+} // namespace precision_tracking
 
 #endif // HIGH_RES_TIMER_H

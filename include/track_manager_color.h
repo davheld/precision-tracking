@@ -16,6 +16,8 @@
 #define TRACKMANAGER_SERIALIZATION_VERSION 2
 #define FRAME_SERIALIZATION_VERSION 0
 
+namespace precision_tracking {
+
 namespace track_manager_color {
 
   class Frame {
@@ -116,6 +118,6 @@ namespace track_manager_color {
   bool floatEq(float x, float y, int maxUlps = 5);
 }
 
-
+} // namespace precision_tracking
    
 #endif //TRACK_MANAGER_COLOR_H

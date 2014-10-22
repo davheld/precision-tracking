@@ -12,6 +12,8 @@
 
 #include <pcl/common/common.h>
 
+namespace precision_tracking {
+
 namespace {
 
 // How far to spill over in the density grid (number of sigmas).
@@ -313,3 +315,5 @@ double DensityGridEvaluator::getLogProbability(
 
   return log_prob;
 }
+
+} // namespace precision_tracking

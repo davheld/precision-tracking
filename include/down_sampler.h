@@ -11,6 +11,8 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
+namespace precision_tracking {
+
 class DownSampler {
 public:
   DownSampler(const bool stochastic);
@@ -38,5 +40,7 @@ public:
 private:
   bool stochastic_;
 };
+
+} // namespace precision_tracking
 
 #endif /* DOWN_SAMPLER_H_ */

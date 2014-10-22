@@ -5,6 +5,9 @@
 
 #include "alignment_evaluator.h"
 
+
+namespace precision_tracking {
+
 namespace {
 
 // Factor to multiply the sensor resolution for our measurement model.
@@ -136,3 +139,5 @@ void AlignmentEvaluator::score3DTransforms(
     scored_transforms->set(scored_transform, i);
   }
 }
+
+} // namespace precision_tracking

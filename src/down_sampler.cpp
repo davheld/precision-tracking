@@ -7,6 +7,8 @@
 
 #include "down_sampler.h"
 
+namespace precision_tracking {
+
 namespace {
 
 // Whether to round up or down for deterministic downsampling when computing
@@ -99,3 +101,5 @@ void DownSampler::downSamplePointsDeterministic(
     }
   }
 }
+
+} // namespace precision_tracking

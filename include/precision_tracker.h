@@ -16,6 +16,8 @@
 #include "adh_tracker3d.h"
 #include "down_sampler.h"
 
+namespace precision_tracking {
+
 class PrecisionTracker {
 public:
   // Whether to include color probabilities when performing the alignment.
@@ -55,5 +57,7 @@ private:
   // Using color is more accurate but much slower.
   bool use_color_;
 };
+
+} // namespace precision_tracking
 
 #endif /* PRECISION_TRACKER_H_ */

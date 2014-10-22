@@ -14,6 +14,8 @@
 
 #include "scored_transform.h"
 
+namespace precision_tracking {
+
 struct TransformComponents{
   TransformComponents()
     :x(0), y(0), z(0), roll(0), pitch(0), yaw(0)
@@ -98,5 +100,7 @@ private:
     // Whether to flip the output of the motion model (-1 to flip, 1 not to flip).
     int flip_;
 };
+
+} // namespace precision_tracking
 
 #endif /* MOTION_MODEL_H_ */

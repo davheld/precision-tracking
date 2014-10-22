@@ -13,6 +13,8 @@
 using std::vector;
 using std::max;
 
+namespace precision_tracking {
+
 namespace {
 
 // We compute the minimum sampling resolution based on the sensor
@@ -301,3 +303,5 @@ void ADHTracker3d::createCandidateXYZTransforms(
     }
   }
 }
+
+} // namespace precision_tracking

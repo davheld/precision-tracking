@@ -11,6 +11,8 @@
 
 using std::max;
 
+namespace precision_tracking {
+
 namespace {
 
 const double pi = boost::math::constants::pi<double>();
@@ -269,6 +271,4 @@ void MotionModel::propagate(const double& recorded_time_diff){
   pdf_constant_ = 1 / (pow(2 * pi, k/2) * pow(determinant, 0.5));
 }
 
-
-
-
+} // namespace precision_tracking

@@ -14,6 +14,8 @@
 
 #include <Eigen/Eigen>
 
+namespace precision_tracking {
+
 // A pure translation, which represents a proposed alignment between
 // the points in the current frame to the previuos frame.
 // The volume is the size of the discretized region of the
@@ -318,5 +320,6 @@ const std::vector<double> ScoredTransforms<TransformType>::getNormalizedProbs() 
   return normalized_probs;
 }
 
+} // namespace precision_tracking
 
 #endif /* SCORED_TRANSFORM_H_ */

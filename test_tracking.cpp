@@ -116,17 +116,17 @@ void evaluateTracking(const std::vector<TrackResults>& velocity_estimates,
 
 // Filter to only evaluate on objects within a given distance (in meters).
 void getWithinDistance(
-    const track_manager_color::TrackManagerColor& track_manager,
+    const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
     const double max_distance, std::vector<bool>& filter) {
-  const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
+  const std::vector< boost::shared_ptr<precision_tracking::track_manager_color::Track> >& tracks =
       track_manager.tracks_;
   for (size_t i = 0; i < tracks.size(); ++i) {
     // Extract frames.
-    const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
-    std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
+    const boost::shared_ptr<precision_tracking::track_manager_color::Track>& track = tracks[i];
+    std::vector< boost::shared_ptr<precision_tracking::track_manager_color::Frame> > frames =
         track->frames_;
     for (size_t j = 1; j < frames.size(); ++j) {
-      boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
+      boost::shared_ptr<precision_tracking::track_manager_color::Frame> frame = frames[j];
 
       Eigen::Vector3f centroid = frame->getCentroid();
       const double distance = sqrt(pow(centroid(0), 2) + pow(centroid(1), 2));
@@ -147,16 +147,16 @@ void getWithinDistance(
 // next.  For such frames, estimating the velocity is prone to errors
 // that should ideally be fixed before the track is passed on to the velocity
 // estimator.
-void find_bad_frames(const track_manager_color::TrackManagerColor& track_manager,
+void find_bad_frames(const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
                      std::vector<TrackResults>* velocity_estimates) {
-  const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
+  const std::vector< boost::shared_ptr<precision_tracking::track_manager_color::Track> >& tracks =
       track_manager.tracks_;
 
   // Iterate over all tracks.
   for (size_t i = 0; i < tracks.size(); ++i) {
     // Extract frames.
-    const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
-    std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
+    const boost::shared_ptr<precision_tracking::track_manager_color::Track>& track = tracks[i];
+    std::vector< boost::shared_ptr<precision_tracking::track_manager_color::Frame> > frames =
         track->frames_;
 
     // Structure for storing estimated velocities for this track.
@@ -168,7 +168,7 @@ void find_bad_frames(const track_manager_color::TrackManagerColor& track_manager
 
     // Iterate over all frames for this track.
     for (size_t j = 0; j < frames.size(); ++j) {
-      boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
+      boost::shared_ptr<precision_tracking::track_manager_color::Frame> frame = frames[j];
 
       const Eigen::Vector3f& centroid = frame->getCentroid();
       const double angle = atan2(centroid(1), centroid(0));
@@ -193,10 +193,10 @@ void find_bad_frames(const track_manager_color::TrackManagerColor& track_manager
           skip_next = false;
         } else {
           track_estimates.ignore_frame[j-1] = true;
-            skip_next = true;
-            if (j > 1) {
-              track_estimates.ignore_frame[j-2] = true;
-            }
+          skip_next = true;
+          if (j > 1) {
+            track_estimates.ignore_frame[j-2] = true;
+          }
         }
       }
     }
@@ -233,17 +233,17 @@ void getSensorResolution(const Eigen::Vector3f& centroid_local_coordinates,
   *sensor_vertical_res = velodyne_vertical_res;
 }
 
-void track(Tracker* tracker,
-           const track_manager_color::TrackManagerColor& track_manager,
+void track(precision_tracking::Tracker* tracker,
+           const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
            std::vector<TrackResults>* velocity_estimates) {
   int total_num_frames = 0;
 
-  const std::vector< boost::shared_ptr<track_manager_color::Track> >& tracks =
+  const std::vector< boost::shared_ptr<precision_tracking::track_manager_color::Track> >& tracks =
       track_manager.tracks_;
 
   std::ostringstream hrt_title_stream;
   hrt_title_stream << "Total time for tracking " << tracks.size() << " objects";
-  HighResTimer hrt(hrt_title_stream.str());
+  precision_tracking::HighResTimer hrt(hrt_title_stream.str());
   hrt.start();
 
   // Iterate over all tracks.
@@ -252,8 +252,8 @@ void track(Tracker* tracker,
     tracker->clear();
 
     // Extract frames.
-    const boost::shared_ptr<track_manager_color::Track>& track = tracks[i];
-    std::vector< boost::shared_ptr<track_manager_color::Frame> > frames =
+    const boost::shared_ptr<precision_tracking::track_manager_color::Track>& track = tracks[i];
+    std::vector< boost::shared_ptr<precision_tracking::track_manager_color::Frame> > frames =
         track->frames_;
 
     // Structure for storing estimated velocities for this track.
@@ -262,7 +262,7 @@ void track(Tracker* tracker,
 
     // Iterate over all frames for this track.
     for (size_t j = 0; j < frames.size(); ++j) {
-      boost::shared_ptr<track_manager_color::Frame> frame = frames[j];
+      boost::shared_ptr<precision_tracking::track_manager_color::Frame> frame = frames[j];
 
       // Get the sensor resolution.
       double sensor_horizontal_resolution;
@@ -300,8 +300,8 @@ void track(Tracker* tracker,
 }
 
 void trackAndEvaluate(
-    Tracker* tracker,
-    const track_manager_color::TrackManagerColor& track_manager,
+    precision_tracking::Tracker* tracker,
+    const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
     const string gt_folder) {
   // Track all objects and store the estimated velocities.
   std::vector<TrackResults> velocity_estimates;
@@ -322,38 +322,38 @@ void trackAndEvaluate(
   evaluateTracking(velocity_estimates, gt_folder, filter);
 }
 
-void testKalman(const track_manager_color::TrackManagerColor& track_manager,
+void testKalman(const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
                 const string gt_folder) {
   printf("Tracking objects with the centroid-based Kalman filter baseline. "
          "This method is very fast but not very accurate. Please wait...\n");
   const bool use_precision_tracker = false;
   const bool use_color = false;
   const bool use_mean = true;
-  Tracker centroid_tracker(use_precision_tracker, use_color, use_mean);
+  precision_tracking::Tracker centroid_tracker(use_precision_tracker, use_color, use_mean);
   trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
 }
 
 void testPrecisionTracker(
-    const track_manager_color::TrackManagerColor& track_manager,
+    const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
     const string gt_folder) {
   printf("\nTracking objects with our precision tracker. "
          "This method is accurate and fairly fast. Please wait...\n");
   const bool use_precision_tracker = true;
   const bool use_color = false;
   const bool use_mean = true;
-  Tracker precision_tracker(use_precision_tracker, use_color, use_mean);
+  precision_tracking::Tracker precision_tracker(use_precision_tracker, use_color, use_mean);
   trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
 }
 
 void testPrecisionTrackerColor(
-    const track_manager_color::TrackManagerColor& track_manager,
+    const precision_tracking::track_manager_color::TrackManagerColor& track_manager,
     const string gt_folder) {
   printf("\nTracking objects with our precision tracker using color. "
          "This method is a bit more accurate but much slower. Please wait (will be slow)...\n");
   const bool use_precision_tracker = true;
   const bool use_color = true;
   const bool use_mean = true;
-  Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean);
+  precision_tracking::Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean);
   trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
 }
 
@@ -369,7 +369,7 @@ int main(int argc, char **argv)
 
   // Load tracks.
   printf("Loading file: %s\n", color_tm_file.c_str());
-  track_manager_color::TrackManagerColor track_manager(color_tm_file);
+  precision_tracking::track_manager_color::TrackManagerColor track_manager(color_tm_file);
   printf("Found %zu tracks\n", track_manager.tracks_.size());
 
   // Track objects and evaluate the accuracy.

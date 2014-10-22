@@ -14,6 +14,8 @@
 #include "motion_model.h"
 #include "precision_tracker.h"
 
+namespace precision_tracking {
+
 class Tracker {
 public:
   // Default constructor, uses precision tracker with no color and returns
@@ -59,5 +61,6 @@ private:
   bool use_mean_;
 };
 
+} // namespace precision_tracking
 
 #endif /* TRACKER_H_ */

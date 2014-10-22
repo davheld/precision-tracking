@@ -22,6 +22,8 @@ using std::min;
 using std::pair;
 using std::vector;
 
+namespace precision_tracking {
+
 namespace {
 
 // Approximation factor for finding the nearest neighbor.
@@ -377,3 +379,5 @@ double LF_RGBD_6D_Evaluator::computeColorProb(const pcl::PointXYZRGB& prev_pt,
 
   return point_prob;
 }
+
+} // namespace precision_tracking

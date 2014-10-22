@@ -24,6 +24,8 @@
 #include "motion_model.h"
 #include "scored_transform.h"
 
+namespace precision_tracking {
+
 class ADHTracker3d {
 public:
   ADHTracker3d();
@@ -71,5 +73,7 @@ private:
       const std::pair <double, double>& zRange_orig,
       std::vector<XYZTransform>* transforms) const;
 };
+
+} // namespace precision_tracking
 
 #endif /* ADH_TRACKER_3D_H_ */

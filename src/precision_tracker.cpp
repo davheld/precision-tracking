@@ -14,6 +14,8 @@
 #include "density_grid_evaluator.h"
 #include "lf_rgbd_6d_evaluator.h"
 
+namespace precision_tracking {
+
 namespace {
 
 // We downsample the current frame of the tracked object to have this many
@@ -192,3 +194,5 @@ Eigen::Matrix4f PrecisionTracker::estimateAlignmentCentroidDiff(
 
   return guess;
 }
+
+} // namespace precision_tracking

@@ -29,6 +29,8 @@ struct ScoredTransform;
 struct XYZTransform;
 class MotionModel;
 
+namespace precision_tracking {
+
 class DensityGridEvaluator : public AlignmentEvaluator {
 public:
   DensityGridEvaluator();
@@ -82,6 +84,8 @@ private:
   int num_spillover_steps_xy_;
   int num_spillover_steps_z_;
 };
+
+} // namespace precision_tracking
 
 #endif /* DENSITY_GRID_EVALUATOR_H_ */
 

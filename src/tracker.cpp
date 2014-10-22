@@ -9,6 +9,8 @@
 
 #include <pcl/common/centroid.h>
 
+namespace precision_tracking {
+
 Tracker::Tracker()
     : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
       prev_timestamp_(-1),
@@ -130,3 +132,5 @@ void Tracker::addPoints(
   *previousModel_ = *current_points;
   prev_timestamp_ = current_timestamp;
 }
+
+} // namespace precision_tracking

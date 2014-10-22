@@ -2,6 +2,8 @@
 
 #define HRTCLOCK CLOCK_PROCESS_CPUTIME_ID
 
+namespace precision_tracking {
+
 HighResTimer::HighResTimer(const std::string& description) :
   description_(description),
   total_us_(0)
@@ -119,4 +121,4 @@ ScopedTimer::~ScopedTimer()
   std::cout << hrt_.report() << std::endl;
 }
 
-
+} // namespace precision_tracking

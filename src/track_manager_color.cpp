@@ -21,6 +21,8 @@ using std::cerr;
 using std::pair;
 using std::cout;
 
+namespace precision_tracking {
+
 namespace track_manager_color {
 
 TrackManagerColor::TrackManagerColor() :
@@ -691,3 +693,5 @@ bool floatEq(float x, float y, int maxUlps)
 }  
   
 } // namespace track_manager
+
+} // namespace precision_tracking

@@ -9,6 +9,8 @@
 
 using std::vector;
 
+namespace precision_tracking {
+
 ScoredTransform6D::~ScoredTransform6D() {
   // TODO Auto-generated destructor stub
 }
@@ -44,3 +46,5 @@ KahanAccumulation KahanSum(KahanAccumulation accumulation, double value)
     result.sum = t;
     return result;
 }
+
+} // namespace precision_tracking

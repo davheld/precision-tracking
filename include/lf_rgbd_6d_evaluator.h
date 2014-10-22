@@ -23,6 +23,8 @@
 #include "scored_transform.h"
 #include "alignment_evaluator.h"
 
+namespace precision_tracking {
+
 // A 6D transform
 struct Transform6D {
 public:
@@ -129,5 +131,7 @@ private:
   double color_exp_factor2_;
   double prob_color_match_;
 };
+
+} // namespace precision_tracking
 
 #endif /* LF_RGBD_6D_EVALUATOR_H_ */

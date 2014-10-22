@@ -15,6 +15,8 @@
 #include "motion_model.h"
 #include "scored_transform.h"
 
+namespace precision_tracking {
+
 class AlignmentEvaluator
 {
 public:
@@ -78,5 +80,7 @@ protected:
   // between points.
   double measurement_discount_factor_;
 };
+
+} // namespace precision_tracking
 
 #endif // ALIGNMENT_EVALUATOR_H
