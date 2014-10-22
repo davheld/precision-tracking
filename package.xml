@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <name>precision_tracking</name>
+  <version>0.0.0</version>
+  <description>Dave Held's precision tracker</description>
+  <author email="davheld@stanford.edu">Dave Held</author>
+  <author>Devin Guillory</author>
+  <maintainer email="davheld@stanford.edu">Dave Held</maintainer>
+  
+  <license>STANFORD ACADEMIC SOFTWARE LICENSE</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>eigen</build_depend>
+  <build_depend>libpcl-all-dev</build_depend>
+
+  <run_depend>eigen</run_depend>
+  <run_depend>libpcl-all</run_depend>
+</package>
+
