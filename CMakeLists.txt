@@ -1,21 +1,32 @@
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8)
+project(precision_tracking)
+set(CMAKE_BUILD_TYPE Debug)
 
-project(segmentation)
 
-if (NOT CMAKE_BUILD_TYPE)
-    message(STATUS "No build type selected, default to Release")
-    set(CMAKE_BUILD_TYPE "Release")
-  endif()
+find_package(Boost REQUIRED thread signals)
+find_package(catkin REQUIRED)
+find_package(Eigen REQUIRED)
+find_package(PCL REQUIRED COMPONENTS common kdtree io)
 
-find_package(PCL 1.2 REQUIRED)
 
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME}
+  DEPENDS EIGEN PCL
+)
+
+include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+
+add_definitions(${EIGEN_DEFINITIONS})
 add_definitions(${PCL_DEFINITIONS})
 
-include_directories (include)
+find_package(OpenMP)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 
-add_library (precision_tracker
+
+add_library (${PROJECT_NAME}
   src/track_manager_color.cpp
   src/tracker.cpp
   src/precision_tracker.cpp
@@ -38,7 +49,11 @@ add_library (precision_tracker
   include/precision_tracking/density_grid_evaluator.h
   include/precision_tracking/lf_rgbd_6d_evaluator.h
   include/precision_tracking/high_res_timer.h
-  include/precision_tracking/alignment_evaluator.h)
+  include/precision_tracking/alignment_evaluator.h
+)
+target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${EIGEN_LIBRARIES} ${PCL_LIBRARIES})
+
 
 add_executable (test_tracking test_tracking.cpp)
-target_link_libraries (test_tracking ${PCL_LIBRARIES} precision_tracker)
+target_link_libraries (test_tracking ${PROJECT_NAME})
+
