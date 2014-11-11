@@ -39,6 +39,18 @@ public:
       Eigen::Vector3f* estimated_velocity,
       double* alignment_probability);
 
+  const Eigen::Matrix3d get_covariance_velocity() const {
+    return motion_model_->get_covariance_velocity();
+  }
+
+    Eigen::Vector3d get_mean_delta_position() const {
+        return motion_model_->get_mean_delta_position();
+  }
+
+  const Eigen::Matrix3d get_covariance_delta_position() const {
+    return motion_model_->get_covariance_delta_position();
+  }
+
 private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previousModel_;
   double prev_timestamp_;

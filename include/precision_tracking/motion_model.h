@@ -49,6 +49,10 @@ public:
     return mean_velocity_.cast<float>();
   }
 
+  const Eigen::Matrix3d get_covariance_velocity() const {
+    return covariance_velocity_;
+  }
+
 	bool valid() const { return valid_; }
 
     Eigen::Vector3d get_mean_delta_position() const {
