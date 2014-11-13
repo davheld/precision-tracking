@@ -51,6 +51,10 @@ public:
     return motion_model_->get_covariance_delta_position();
   }
 
+  const MotionModel & get_motion_model() const {
+    return *motion_model_;
+  }
+
 private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previousModel_;
   double prev_timestamp_;

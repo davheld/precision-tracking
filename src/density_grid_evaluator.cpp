@@ -23,10 +23,10 @@ const double kSpilloverRadius = 2.0;
 
 // Total size = 3.7 GB
 // At a resolution of 1.2 cm, a 10 m wide object will take 1000 cells.
-const int kMaxXSize = 1000;
-const int kMaxYSize = 1000;
+const int kMaxXSize = 250;
+const int kMaxYSize = 250;
 // At a resolution of 1.2 cm, a 5 m tall object will take 500 cells.
-const int kMaxZSize = 500;
+const int kMaxZSize = 75;
 
 using std::vector;
 using std::pair;
