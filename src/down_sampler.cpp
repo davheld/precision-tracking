@@ -9,31 +9,27 @@
 
 namespace precision_tracking {
 
-namespace {
 
-// Whether to round up or down for deterministic downsampling when computing
-// how many points to skip.
-const bool kUseCeil = true;
-
-} // namespace
-
-DownSampler::DownSampler(const bool stochastic)
-  : stochastic_(stochastic)
+DownSampler::DownSampler(const bool stochastic, const Params *params)
+  : params_(params),
+    stochastic_(stochastic)
 {
 }
 
-DownSampler::~DownSampler() {
+DownSampler::~DownSampler()
+{
   // TODO Auto-generated destructor stub
 }
 
 void DownSampler::downSamplePoints(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
     const int target_num_points,
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) const {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) const
+{
   if (stochastic_) {
     downSamplePointsStochastic(points, target_num_points, down_sampled_points);
   } else {
-    downSamplePointsDeterministic(points, target_num_points, down_sampled_points);
+    downSamplePointsDeterministic(points, target_num_points, down_sampled_points, params_->kUseCeil);
   }
 }
 
@@ -41,7 +37,8 @@ void DownSampler::downSamplePoints(
 void DownSampler::downSamplePointsStochastic(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
     const int target_num_points,
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points)
+{
   const size_t num_points = points->size();
 
   // Check if the points are already sufficiently down-sampled.
@@ -68,7 +65,9 @@ void DownSampler::downSamplePointsStochastic(
 void DownSampler::downSamplePointsDeterministic(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
     const int target_num_points,
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points) {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr& down_sampled_points,
+    const bool use_ceil)
+{
   const size_t num_points = points->size();
 
   // Check if the points are already sufficiently down-sampled.
@@ -79,7 +78,7 @@ void DownSampler::downSamplePointsDeterministic(
 
   // Select every N points to reach the target number of points.
   int everyN = 0;
-  if (kUseCeil) {
+  if (use_ceil) {
     everyN = ceil(static_cast<double>(num_points) /
                   static_cast<double>(target_num_points));
   } else {

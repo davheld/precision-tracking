@@ -13,19 +13,21 @@
 
 #include <precision_tracking/motion_model.h>
 #include <precision_tracking/precision_tracker.h>
+#include <precision_tracking/params.h>
 
 namespace precision_tracking {
 
 class Tracker {
 public:
-  // Default constructor, uses precision tracker with no color and returns
-  // the mean of the distribution.
-  Tracker();
+  /// Default constructor, uses precision tracker with no color and returns
+  /// the mean of the distribution.
+  explicit Tracker(const Params *params);
 
-  // Constructor to choose options for the type of tracking.
+  /// Constructor to choose options for the type of tracking.
   Tracker(const bool use_precision_tracker,
           const bool use_color,
-          const bool use_mean);
+          const bool use_mean,
+          const Params *params);
 
   virtual ~Tracker();
 
@@ -56,6 +58,7 @@ public:
   }
 
 private:
+  const Params *params_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previousModel_;
   double prev_timestamp_;
 

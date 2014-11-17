@@ -16,34 +16,14 @@ using std::max;
 
 namespace precision_tracking {
 
-namespace {
 
-// We compute the minimum sampling resolution based on the sensor
-// resolution - we are limited in accuracy by the sensor resolution,
-// so there is no point in sampling at a much finer scale.
-// The minimum sampling resolution is set to be no smaller than
-// sensor_resolution / kMinResFactor.
-const double kMinResFactor = 1;
-
-// The desired sampling resolution.
-const double kDesiredSamplingResolution = 0.05;
-
-// How much to reduce the sampling resolution each iteration.
-const double kReductionFactor = 3;
-
-// Set this to limit the maximum number of transforms that we
-// evaluate at each iteration beyond the first.
-const size_t kMaxNumTransforms = 0;
-
-// Only divide cells whose probabilities are greater than kMinProb.
-const double kMinProb = 0.0001;
-
-} // namespace
-
-ADHTracker3d::ADHTracker3d(){
+ADHTracker3d::ADHTracker3d(const Params *params)
+  : params_(params)
+{
 }
 
-ADHTracker3d::~ADHTracker3d() {
+ADHTracker3d::~ADHTracker3d()
+{
 }
 
 void ADHTracker3d::track(
@@ -59,12 +39,13 @@ void ADHTracker3d::track(
     const double xy_sensor_resolution,
     const double z_sensor_resolution,
     boost::shared_ptr<AlignmentEvaluator> alignment_evaluator,
-    ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) const {
+    ScoredTransforms<ScoredTransformXYZ>* final_scored_transforms3D) const
+{
   // Compute the minimum sampling resolution based on the sensor
   // resolution - we are limited in accuracy by the sensor resolution,
   // so there is no point in sampling at a much finer scale.
   const double min_xy_sampling_resolution =
-      max(xy_sensor_resolution / kMinResFactor, kDesiredSamplingResolution);
+      max(xy_sensor_resolution / params_->kMinResFactor, params_->kDesiredSamplingResolution);
 
   // Initialize the sampling resolution.
   double current_xy_sampling_resolution = initial_xy_sampling_resolution;
@@ -105,9 +86,9 @@ void ADHTracker3d::track(
 
     // Next we want to sample more finely, so reduce the sampling resolution.
     const double new_xy_sampling_resolution =
-        current_xy_sampling_resolution / kReductionFactor;
+        current_xy_sampling_resolution / params_->kReductionFactor;
     const double new_z_sampling_resolution =
-        current_z_sampling_resolution / kReductionFactor;
+        current_z_sampling_resolution / params_->kReductionFactor;
 
     // Make candidate transforms at the new sampling resolution.
     makeNewTransforms3D(
@@ -123,7 +104,8 @@ void ADHTracker3d::track(
 
 void ADHTracker3d::recomputeProbs(
     const double prior_region_prob,
-    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const {
+    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const
+{
   // Get the conditional probabilities for the region that we subdivided,
   // p(Cell | Region)
   const std::vector<double>& conditional_probs =
@@ -148,9 +130,10 @@ void ADHTracker3d::makeNewTransforms3D(
     const double old_z_sampling_resolution,
     ScoredTransforms<ScoredTransformXYZ>* scored_transforms,
     std::vector<XYZTransform>* new_xyz_transforms,
-    double* total_recomputing_prob) const {
+    double* total_recomputing_prob) const
+{
   // If we are only using the top k transforms, we need to sort them.
-  if (kMaxNumTransforms > 0) {
+  if (params_->kMaxNumTransforms > 0) {
     scored_transforms->sortDescending();
   }
 
@@ -173,8 +156,8 @@ void ADHTracker3d::makeNewTransforms3D(
   const std::vector<double>& probs = scored_transforms->getNormalizedProbs();
 
   // Allocate space for the new transforms that we will recompute.
-  const size_t max_num_transforms = kMaxNumTransforms > 0 ?
-        std::min(probs.size(), kMaxNumTransforms) : probs.size();
+  const size_t max_num_transforms = params_->kMaxNumTransforms > 0 ?
+        std::min(probs.size(), params_->kMaxNumTransforms) : probs.size();
   new_xyz_transforms->clear();
   new_xyz_transforms->reserve(max_num_transforms);
 
@@ -188,7 +171,7 @@ void ADHTracker3d::makeNewTransforms3D(
 
     // Only subdivide cells whose probabilities are greater than the minimum
     // threshold.
-    if (probs[i] > kMinProb) {
+    if (probs[i] > params_->kMinProb) {
       *total_recomputing_prob += probs[i];
 
       // We are sampling more finely in this region, so we can remove
@@ -201,10 +184,10 @@ void ADHTracker3d::makeNewTransforms3D(
       const double min_z = old_z - old_z_sampling_resolution / 2 + z_sampling_resolution / 2;
 
       // Sample more finely in this region.
-      for (int i = 0; i < kReductionFactor; ++i) {
+      for (int i = 0; i < params_->kReductionFactor; ++i) {
         const double new_x = min_x + xy_sampling_resolution * i;
 
-        for (int j = 0; j < kReductionFactor; ++j) {
+        for (int j = 0; j < params_->kReductionFactor; ++j) {
           const double new_y = min_y + xy_sampling_resolution * j;
 
           if (z_sampling_resolution == 0) {
@@ -213,7 +196,7 @@ void ADHTracker3d::makeNewTransforms3D(
             XYZTransform new_transform(new_x, new_y, new_z, volume);
             new_xyz_transforms->push_back(new_transform);
           } else {
-            for (int k = 0; k < kReductionFactor; ++k) {
+            for (int k = 0; k < params_->kReductionFactor; ++k) {
               const double new_z = min_z + z_sampling_resolution * k;
 
               XYZTransform new_transform(new_x, new_y, new_z, volume);
@@ -238,7 +221,8 @@ void ADHTracker3d::createCandidateXYZTransforms(
     const std::pair <double, double>& xRange,
     const std::pair <double, double>& yRange,
     const std::pair <double, double>& zRange_orig,
-    std::vector<XYZTransform>* transforms) const {
+    std::vector<XYZTransform>* transforms) const
+{
   if (xy_sampling_resolution == 0) {
     printf("Error - xy sampling resolution must be > 0");
     exit(1);

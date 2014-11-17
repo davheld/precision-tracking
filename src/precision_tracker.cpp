@@ -19,53 +19,36 @@ namespace precision_tracking {
 
 namespace {
 
-// We downsample the current frame of the tracked object to have this many
-// points.
-const int kCurrFrameDownsample = 150;
-
-// We downsample the previous frame of the tracked object to have this many
-// points.
-const int kPrevFrameDownsample = 2000;
-
-// Whether to deterministically or stochastically downsample points from
-// the tracked object.
-const bool stochastic_downsample = false;
-
-// Set to 0 so we do not search over z (for objects moving in urban settings,
-// the vertical motion is small).
-const double maxZ = 0;
-
-// Start with a very coarse xy sampling for efficiency.
-const double kInitialXYSamplingResolution = 1;
-
-// Do not sample in the z-direction - assume minimal vertical motion.
-const double kInitialZSamplingResolution = 0;
-
 using std::pair;
 using std::max;
 
 } // namespace
 
-PrecisionTracker::PrecisionTracker()
-  : down_sampler_(stochastic_downsample),
+PrecisionTracker::PrecisionTracker(const Params *params)
+  : params_(params),
+    adh_tracker3d_(params_),
+    down_sampler_(params_->stochastic_downsample, params_),
     use_color_(false)
 {
-  alignment_evaluator_.reset(new DensityGridEvaluator);
+  alignment_evaluator_.reset(new DensityGridEvaluator(params_));
 }
 
-PrecisionTracker::PrecisionTracker(const bool use_color)
-  : down_sampler_(stochastic_downsample),
+PrecisionTracker::PrecisionTracker(const bool use_color, const Params *params)
+  : params_(params),
+    adh_tracker3d_(params_),
+    down_sampler_(params_->stochastic_downsample, params_),
     use_color_(use_color)
 {
   if (use_color) {
-    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator(true));
+    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator(true, params_));
   } else {
-    alignment_evaluator_.reset(new DensityGridEvaluator);
+    alignment_evaluator_.reset(new DensityGridEvaluator(params_));
   }
 }
 
 
-PrecisionTracker::~PrecisionTracker() {
+PrecisionTracker::~PrecisionTracker()
+{
   // TODO Auto-generated destructor stub
 }
 
@@ -75,7 +58,8 @@ void PrecisionTracker::track(
     const double sensor_horizontal_resolution_actual,
     const double sensor_vertical_resolution_actual,
     const MotionModel& motion_model,
-    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
+    ScoredTransforms<ScoredTransformXYZ>* scored_transforms)
+{
   // Estimate the search range for alignment.
   std::pair <double, double> xRange;
   std::pair <double, double> yRange;
@@ -92,7 +76,7 @@ void PrecisionTracker::track(
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr previous_model_downsampled(
         new pcl::PointCloud<pcl::PointXYZRGB>);
   down_sampler_.downSamplePoints(
-        prev_points, kPrevFrameDownsample, previous_model_downsampled);
+        prev_points, params_->kPrevFrameDownsample, previous_model_downsampled);
 
   // Compute the ratio by which we down-sampled, which decreases the effective
   // resolution.
@@ -104,7 +88,7 @@ void PrecisionTracker::track(
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr down_sampled_current(
         new pcl::PointCloud<pcl::PointXYZRGB>);
   down_sampler_.downSamplePoints(
-        current_points, kCurrFrameDownsample, down_sampled_current);
+        current_points, params_->kCurrFrameDownsample, down_sampled_current);
 
   // The effective resolution = resolution / downsample factor.
   const double sensor_horizontal_res =
@@ -115,7 +99,7 @@ void PrecisionTracker::track(
   // Align the previous points to the current points using the annealed
   // dynamic histogram trakcer.
   adh_tracker3d_.track(
-        kInitialXYSamplingResolution, kInitialZSamplingResolution,
+        params_->kInitialXYSamplingResolution, params_->kInitialZSamplingResolution,
         xRange, yRange, zRange,
         down_sampled_current, previous_model_downsampled,
         current_points_centroid, motion_model,
@@ -128,7 +112,8 @@ void PrecisionTracker::estimateRange(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
     std::pair <double, double>* xRange,
     std::pair <double, double>* yRange,
-    std::pair <double, double>* zRange) const {
+    std::pair <double, double>* zRange) const
+{
   // Compute the displacement of the centroid.
   Eigen::Matrix4f centroidDiffTransform =
       estimateAlignmentCentroidDiff(current_points, prev_points);
@@ -171,12 +156,13 @@ void PrecisionTracker::estimateRange(
 
   *xRange = std::make_pair(-maxX + x_init, maxX + x_init);
   *yRange = std::make_pair(-maxY + y_init, maxY + y_init);
-  *zRange = std::make_pair(-maxZ + z_init, maxZ + z_init);
+  *zRange = std::make_pair(-params_->maxZ + z_init, params_->maxZ + z_init);
 }
 
 Eigen::Matrix4f PrecisionTracker::estimateAlignmentCentroidDiff(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& curr_points,
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points) const {
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points) const
+{
   Eigen::Vector4f new_centroid;
   pcl::compute3DCentroid (*curr_points, new_centroid);
 

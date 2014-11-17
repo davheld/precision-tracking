@@ -18,24 +18,13 @@ namespace {
 
 const double pi = boost::math::constants::pi<double>();
 
-// How much noise to add to the velocity covariance.
-const double kPropagationVarianceXY = 10;
-const double kPropagationVarianceZ = 10;
-
-// The measurement noise for a centroid-based Kalman filter.
-const double kCentroidMeasurementNoise = 0.4;
-
-// The initial velocity variance for a centroid-based Kalman filter.
-const double kCentroidInitVelocityVariance = 5;
-
-// Minimum probability returned by the motion model.
-const double kMotionMinProb = 1e-4;
-
 } // namespace
 
-MotionModel::MotionModel()
-  : pdf_constant_(1),
-    min_score_(kMotionMinProb),
+
+MotionModel::MotionModel(const Params *params)
+  : params_(params),
+    pdf_constant_(1),
+    min_score_(params_->kMotionMinProb),
     valid_eigen_vectors_(false),
     valid_(false),
     flip_(1)
@@ -43,25 +32,27 @@ MotionModel::MotionModel()
   // We assume that, at each time step, we independently sample an acceleration
   // with 0 mean and covariance of covariance_propagation_uncertainty_.
   covariance_propagation_uncertainty_ = Eigen::Matrix3d::Zero();
-  covariance_propagation_uncertainty_(0,0) = kPropagationVarianceXY;
-  covariance_propagation_uncertainty_(1,1) = kPropagationVarianceXY;
-  covariance_propagation_uncertainty_(2,2) = kPropagationVarianceZ;
+  covariance_propagation_uncertainty_(0,0) = params_->kPropagationVarianceXY;
+  covariance_propagation_uncertainty_(1,1) = params_->kPropagationVarianceXY;
+  covariance_propagation_uncertainty_(2,2) = params_->kPropagationVarianceZ;
 
   // For the centroid Kalman filter, we set the initial mean and covariance.
   // The precision tracker uses the first alignment to initialize the mean
   // and covariance.
   covariance_velocity_ =
-      kCentroidInitVelocityVariance * Eigen::Matrix3d::Identity();
+      params_->kCentroidInitVelocityVariance * Eigen::Matrix3d::Identity();
   mean_velocity_ = Eigen::Vector3d::Zero();
 }
 
-MotionModel::~MotionModel() {
+MotionModel::~MotionModel()
+{
   // TODO Auto-generated destructor stub
 }
 
 void MotionModel::addTransformsWeightedGaussian(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
-    const double& recorded_time_diff) {
+    const double& recorded_time_diff)
+{
   // If the recorded_time_diff is 0 or very small, we avoid numerical
   // issues by thresholding at 0.01.
   const double time_diff = max(0.01, recorded_time_diff);
@@ -88,8 +79,8 @@ void MotionModel::addTransformsWeightedGaussian(
 Eigen::Matrix3d MotionModel::computeCovarianceVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
     const double time_diff,
-    const Eigen::Vector3d& mean_velocity) const {
-
+    const Eigen::Vector3d& mean_velocity) const
+{
   double x_velocity_mean = mean_velocity(0);
   double y_velocity_mean = mean_velocity(1);
   double z_velocity_mean = mean_velocity(2);
@@ -134,7 +125,8 @@ Eigen::Matrix3d MotionModel::computeCovarianceVelocity(
 
 Eigen::Vector3d MotionModel::computeMeanVelocity(
     const ScoredTransforms<ScoredTransformXYZ>& transforms,
-    const double time_diff) const {
+    const double time_diff) const
+{
   // Compute the mean delta position.
   TransformComponents mean_delta_position;
 
@@ -175,7 +167,8 @@ Eigen::Vector3d MotionModel::computeMeanVelocity(
 }
 
 double MotionModel::computeScore(const double x, const double y,
-    const double z) const {
+    const double z) const
+{
   TransformComponents components;
   components.x = x;
   components.y = y;
@@ -183,7 +176,8 @@ double MotionModel::computeScore(const double x, const double y,
   return computeScore(components);
 }
 
-double MotionModel::computeScore(const TransformComponents& components) const {
+double MotionModel::computeScore(const TransformComponents& components) const
+{
   if (!valid_) {
 		return 1;
   } else {
@@ -200,7 +194,8 @@ double MotionModel::computeScore(const TransformComponents& components) const {
 }
 
 void MotionModel::addCentroidDiff(const Eigen::Vector4f& centroid_diff,
-                                  const double recorded_time_diff){
+                                  const double recorded_time_diff)
+{
   // If the recorded_time_diff is 0 or very small, we avoid numerical
   // issues by thresholding at 0.01.
   const double time_diff = max(0.01, recorded_time_diff);
@@ -216,7 +211,7 @@ void MotionModel::addCentroidDiff(const Eigen::Vector4f& centroid_diff,
 
   // Compute the measurement covariance.
   Eigen::Matrix3d Q =
-      kCentroidMeasurementNoise * Eigen::Matrix3d::Identity();
+      params_->kCentroidMeasurementNoise * Eigen::Matrix3d::Identity();
 
   // Compute the Kalman gain.
   Eigen::MatrixXd K = covariance_velocity_ * C.transpose() *
@@ -233,8 +228,8 @@ void MotionModel::addCentroidDiff(const Eigen::Vector4f& centroid_diff,
 	valid_ = true;
 }
 
-void MotionModel::propagate(const double& recorded_time_diff){
-
+void MotionModel::propagate(const double& recorded_time_diff)
+{
 	if (!valid_){
     // Nothing to propagate!
 		return;

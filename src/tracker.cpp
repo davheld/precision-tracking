@@ -13,44 +13,49 @@
 
 namespace precision_tracking {
 
-Tracker::Tracker()
-    : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
+Tracker::Tracker(const Params *params)
+    : params_(params),
+      previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
       prev_timestamp_(-1),
       use_precision_tracker_(true),
       use_color_(false),
       use_mean_(true)
 {
-  motion_model_.reset(new MotionModel);
+  motion_model_.reset(new MotionModel(params_));
 
   if (use_precision_tracker_) {
-    precision_tracker_.reset(new PrecisionTracker(use_color_));
+    precision_tracker_.reset(new PrecisionTracker(use_color_, params_));
   }
 
 }
 
 Tracker::Tracker(const bool use_precision_tracker,
                  const bool use_color,
-                 const bool use_mean)
-    : previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
+                 const bool use_mean,
+                 const Params *params)
+    : params_(params),
+      previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
       prev_timestamp_(-1),
       use_precision_tracker_(use_precision_tracker),
       use_color_(use_color),
       use_mean_(use_mean)
 {
-  motion_model_.reset(new MotionModel);
+  motion_model_.reset(new MotionModel(params_));
 
   if (use_precision_tracker_) {
-    precision_tracker_.reset(new PrecisionTracker(use_color_));
+    precision_tracker_.reset(new PrecisionTracker(use_color_, params_));
   }
 }
 
 
-Tracker::~Tracker() {
+Tracker::~Tracker()
+{
   // TODO Auto-generated destructor stub
 }
 
-void Tracker::clear(){
-  motion_model_.reset(new MotionModel);
+void Tracker::clear()
+{
+  motion_model_.reset(new MotionModel(params_));
   previousModel_->clear();
 }
 
@@ -60,7 +65,8 @@ void Tracker::addPoints(
     const double sensor_horizontal_resolution,
     const double sensor_vertical_resolution,
     Eigen::Vector3f* estimated_velocity,
-    double* alignment_probability) {
+    double* alignment_probability)
+{
   // Do not align if there are no points.
   if (current_points->size() == 0){
     printf("No points - cannot align.\n");

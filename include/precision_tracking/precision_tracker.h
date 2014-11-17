@@ -15,18 +15,20 @@
 #include <precision_tracking/motion_model.h>
 #include <precision_tracking/adh_tracker3d.h>
 #include <precision_tracking/down_sampler.h>
+#include <precision_tracking/params.h>
 
 namespace precision_tracking {
 
 class PrecisionTracker {
 public:
-  // Whether to include color probabilities when performing the alignment.
-  // Using color is more accurate but much slower.
-  PrecisionTracker(const bool use_color);
+  /// Whether to include color probabilities when performing the alignment.
+  /// Using color is more accurate but much slower.
+  PrecisionTracker(const bool use_color, const Params *params);
 
-  // Default constructor - does not use color. This is slightly less
-  // accurate but much faster than the version with color.
-  PrecisionTracker();
+  /// Default constructor - does not use color. This is slightly less
+  /// accurate but much faster than the version with color.
+  explicit PrecisionTracker(const Params *params);
+
   virtual ~PrecisionTracker();
 
   void track(
@@ -48,6 +50,8 @@ private:
   Eigen::Matrix4f estimateAlignmentCentroidDiff(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& curr_points,
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points) const;
+
+  const Params *params_;
 
   ADHTracker3d adh_tracker3d_;
   boost::shared_ptr<AlignmentEvaluator> alignment_evaluator_;

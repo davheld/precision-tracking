@@ -13,6 +13,7 @@
 #include <Eigen/Eigen>
 
 #include <precision_tracking/scored_transform.h>
+#include <precision_tracking/params.h>
 
 namespace precision_tracking {
 
@@ -27,7 +28,7 @@ struct TransformComponents{
 
 class MotionModel {
 public:
-  MotionModel();
+  explicit MotionModel(const Params *params);
 	virtual ~MotionModel();
 
   void addTransformsWeightedGaussian(
@@ -82,6 +83,8 @@ private:
       const ScoredTransforms<ScoredTransformXYZ>& transforms,
       const double time_diff,
       const Eigen::Vector3d& mean_velocity) const;
+
+  const Params *params_;
 
 	Eigen::Vector3d mean_velocity_;
 	Eigen::Matrix3d covariance_velocity_;

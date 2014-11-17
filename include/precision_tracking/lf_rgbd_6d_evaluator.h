@@ -52,7 +52,7 @@ public:
 
 class LF_RGBD_6D_Evaluator : public AlignmentEvaluator {
 public:
-  LF_RGBD_6D_Evaluator (const double use_color);
+  LF_RGBD_6D_Evaluator (const double use_color, const Params *params);
   virtual ~LF_RGBD_6D_Evaluator();
 
   void setPrevPoints(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points);

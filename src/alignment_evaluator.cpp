@@ -8,50 +8,20 @@
 
 namespace precision_tracking {
 
-namespace {
-
-// Factor to multiply the sensor resolution for our measurement model.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = (sensor_resolution * kSigmaFactor)^2 + other terms.
-const double kSigmaFactor = 0.5;
-
-// Factor to multiply the particle sampling resolution for our measurement
-// model. We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = (sampling_resolution * kSigmaGridFactor)^2 + other terms.
-const double kSigmaGridFactor = 1;
-
-// The noise in our sensor which is independent of the distance to the tracked
-// object. We model each point as a Gaussian: exp(-x^2 / 2 sigma^2)
-// With sigma^2 = kMinMeasurementVariance^2 + other terms.
-const double kMinMeasurementVariance = 0.03;
-
-// We add this to our Gaussian so we don't give 0 probability to points
-// that don't align.
-// We model each point as a Gaussian: exp(-x^2 / 2 sigma^2) + kSmoothingFactor
-const double kSmoothingFactor = 0.8;
-
-// We multiply our log measurement probability by this factor, to decrease
-// our confidence in the measurement model (e.g. to take into account
-// dependencies between neighboring points).
-const double kMeasurementDiscountFactor = 1;
-
-// We assume that there are this many independent points per object.  Beyond
-// this many, we discount the measurement model accordingly.
-const double kMaxDiscountPoints = 150.0;
-
-} // namespace
-
-AlignmentEvaluator::AlignmentEvaluator()
-  : smoothing_factor_(kSmoothingFactor)
+AlignmentEvaluator::AlignmentEvaluator(const Params *params)
+  : params_(params)
+  , smoothing_factor_(params_->kSmoothingFactor)
 {
 }
 
-AlignmentEvaluator::~AlignmentEvaluator() {
+AlignmentEvaluator::~AlignmentEvaluator()
+{
   // TODO Auto-generated destructor stub
 }
 
 void AlignmentEvaluator::setPrevPoints(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points) {
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points)
+{
   prev_points_ = prev_points;
 }
 
@@ -60,37 +30,38 @@ void AlignmentEvaluator::init(
     const double z_sampling_resolution,
     const double xy_sensor_resolution,
     const double z_sensor_resolution,
-    const size_t num_current_points) {
+    const size_t num_current_points)
+{
   // Downweight all points in the current frame beyond kMaxDiscountPoints
   // because they are not all independent.
-  if (num_current_points < kMaxDiscountPoints) {
-      measurement_discount_factor_ = kMeasurementDiscountFactor;
+  if (num_current_points < params_->kMaxDiscountPoints) {
+      measurement_discount_factor_ = params_->kMeasurementDiscountFactor;
   } else {
-      measurement_discount_factor_ = kMeasurementDiscountFactor *
-          (kMaxDiscountPoints / num_current_points);
+      measurement_discount_factor_ = params_->kMeasurementDiscountFactor *
+          (params_->kMaxDiscountPoints / num_current_points);
   }
 
   xy_sampling_resolution_ = xy_sampling_resolution;
   z_sampling_resolution_ = z_sampling_resolution;
 
   // Compute the different sources of error in the xy directions.
-  const double sampling_error_xy = kSigmaGridFactor * xy_sampling_resolution;
-  const double resolution_error_xy = kSigmaFactor * xy_sensor_resolution;
-  const double noise_error_xy = kMinMeasurementVariance;
+  const double sampling_error_xy = params_->kSigmaGridFactor * xy_sampling_resolution;
+  const double resolution_error_xy = params_->kSigmaFactor * xy_sensor_resolution;
+  const double noise_error_xy = params_->kMinMeasurementVariance;
 
   // The variance is a combination of these 3 sources of error.
   sigma_xy_ = sqrt(pow(sampling_error_xy, 2) +
-                             pow(resolution_error_xy, 2) +
-                             pow(noise_error_xy, 2));
+                   pow(resolution_error_xy, 2) +
+                   pow(noise_error_xy, 2));
 
   // Compute the different sources of error in the z direction.
-  const double sampling_error_z = kSigmaGridFactor * z_sampling_resolution;
-  const double resolution_error_z = kSigmaFactor * z_sensor_resolution;
-  const double noise_error_z = kMinMeasurementVariance;
+  const double sampling_error_z = params_->kSigmaGridFactor * z_sampling_resolution;
+  const double resolution_error_z = params_->kSigmaFactor * z_sensor_resolution;
+  const double noise_error_z = params_->kMinMeasurementVariance;
 
   // The variance is a combination of these 3 sources of error.
   sigma_z_ = sqrt(pow(sampling_error_z, 2) + pow(resolution_error_z, 2) +
-                            pow(noise_error_z, 2));
+                  pow(noise_error_z, 2));
 
   // Convert the variance to a factor such that
   // exp(-x^2 / 2 sigma^2) = exp(x^2 * exp_factor)
@@ -109,7 +80,8 @@ void AlignmentEvaluator::score3DTransforms(
     const double sensor_vertical_resolution,
     const std::vector<XYZTransform>& transforms,
     const MotionModel& motion_model,
-    ScoredTransforms<ScoredTransformXYZ>* scored_transforms) {
+    ScoredTransforms<ScoredTransformXYZ>* scored_transforms)
+{
   // Initialize variables for tracking grid.
   const size_t num_current_points = current_points->size();
   init(xy_sampling_resolution, z_sampling_resolution,

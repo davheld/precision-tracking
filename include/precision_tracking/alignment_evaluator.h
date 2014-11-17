@@ -14,13 +14,14 @@
 
 #include <precision_tracking/motion_model.h>
 #include <precision_tracking/scored_transform.h>
+#include <precision_tracking/params.h>
 
 namespace precision_tracking {
 
 class AlignmentEvaluator
 {
 public:
-  AlignmentEvaluator();
+  explicit AlignmentEvaluator(const Params *params);
   virtual ~AlignmentEvaluator();
 
   virtual void setPrevPoints(
@@ -53,6 +54,8 @@ protected:
       const Eigen::Vector3f& current_points_centroid,
       const MotionModel& motion_model,
       const double delta_x, const double delta_y, const double delta_z) = 0;
+
+  const Params *params_;
 
   // Previous points for alignment.
   pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points_;

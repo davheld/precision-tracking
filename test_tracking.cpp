@@ -21,6 +21,8 @@ namespace {
 
 const double pi = boost::math::constants::pi<double>();
 
+precision_tracking::Params params;
+
 } // namespace
 
 // Structure for storing estimated velocities for each track.
@@ -329,7 +331,7 @@ void testKalman(const precision_tracking::track_manager_color::TrackManagerColor
   const bool use_precision_tracker = false;
   const bool use_color = false;
   const bool use_mean = true;
-  precision_tracking::Tracker centroid_tracker(use_precision_tracker, use_color, use_mean);
+  precision_tracking::Tracker centroid_tracker(use_precision_tracker, use_color, use_mean, &params);
   trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
 }
 
@@ -341,7 +343,7 @@ void testPrecisionTracker(
   const bool use_precision_tracker = true;
   const bool use_color = false;
   const bool use_mean = true;
-  precision_tracking::Tracker precision_tracker(use_precision_tracker, use_color, use_mean);
+  precision_tracking::Tracker precision_tracker(use_precision_tracker, use_color, use_mean, &params);
   trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
 }
 
@@ -353,7 +355,7 @@ void testPrecisionTrackerColor(
   const bool use_precision_tracker = true;
   const bool use_color = true;
   const bool use_mean = true;
-  precision_tracking::Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean);
+  precision_tracking::Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean, &params);
   trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
 }
 

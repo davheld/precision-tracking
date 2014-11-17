@@ -33,7 +33,7 @@ namespace precision_tracking {
 
 class DensityGridEvaluator : public AlignmentEvaluator {
 public:
-  DensityGridEvaluator();
+  DensityGridEvaluator(const Params *params);
   virtual ~DensityGridEvaluator();
 
 private:
