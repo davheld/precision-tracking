@@ -14,43 +14,11 @@
 namespace precision_tracking {
 
 Tracker::Tracker(const Params *params)
-    : params_(params),
-      previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
-      prev_timestamp_(-1),
-      use_precision_tracker_(true),
-      use_color_(false),
-      use_mean_(true)
+  : params_(params),
+    previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
+    prev_timestamp_(-1)
 {
   motion_model_.reset(new MotionModel(params_));
-
-  if (use_precision_tracker_) {
-    precision_tracker_.reset(new PrecisionTracker(use_color_, params_));
-  }
-
-}
-
-Tracker::Tracker(const bool use_precision_tracker,
-                 const bool use_color,
-                 const bool use_mean,
-                 const Params *params)
-    : params_(params),
-      previousModel_(new pcl::PointCloud<pcl::PointXYZRGB>),
-      prev_timestamp_(-1),
-      use_precision_tracker_(use_precision_tracker),
-      use_color_(use_color),
-      use_mean_(use_mean)
-{
-  motion_model_.reset(new MotionModel(params_));
-
-  if (use_precision_tracker_) {
-    precision_tracker_.reset(new PrecisionTracker(use_color_, params_));
-  }
-}
-
-
-Tracker::~Tracker()
-{
-  // TODO Auto-generated destructor stub
 }
 
 void Tracker::clear()
@@ -86,7 +54,7 @@ void Tracker::addPoints(
     // Always align the smaller points to the bigger points.
     const bool flip = current_points->size() > previousModel_->size();
 
-    if (use_precision_tracker_) {
+    if (precision_tracker_) {
       // Align.
       ScoredTransforms<ScoredTransformXYZ> scored_transforms;
       if (!flip) {
@@ -110,7 +78,7 @@ void Tracker::addPoints(
       ScoredTransformXYZ best_transform;
       scored_transforms.findBest(&best_transform, alignment_probability);
 
-      if (use_mean_) {
+      if (params_->useMean) {
         Eigen::Vector3f mean_velocity = motion_model_->get_mean_velocity();
         *estimated_velocity = mean_velocity;
       } else {

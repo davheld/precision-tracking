@@ -27,20 +27,10 @@ using std::max;
 PrecisionTracker::PrecisionTracker(const Params *params)
   : params_(params),
     adh_tracker3d_(params_),
-    down_sampler_(params_->stochastic_downsample, params_),
-    use_color_(false)
+    down_sampler_(params_->stochastic_downsample, params_)
 {
-  alignment_evaluator_.reset(new DensityGridEvaluator(params_));
-}
-
-PrecisionTracker::PrecisionTracker(const bool use_color, const Params *params)
-  : params_(params),
-    adh_tracker3d_(params_),
-    down_sampler_(params_->stochastic_downsample, params_),
-    use_color_(use_color)
-{
-  if (use_color) {
-    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator(true, params_));
+  if (params_->useColor) {
+    alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator(params_));
   } else {
     alignment_evaluator_.reset(new DensityGridEvaluator(params_));
   }

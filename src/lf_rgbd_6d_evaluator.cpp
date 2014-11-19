@@ -35,14 +35,14 @@ const double pi = boost::math::constants::pi<double>();
 } // namespace
 
 
-LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator(const double use_color, const Params *params)
+LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator(const Params *params)
     : AlignmentEvaluator(params),
       searchTree_(false),  //  //By setting sorted to false,
                                 // the radiusSearch operations will be faster.
       max_nn_(1),
       nn_indices_(max_nn_),
       nn_sq_dists_(max_nn_),
-      use_color_(use_color),
+      use_color_(params->useColor),
       color_exp_factor1_(-1.0 / params_->kValueSigma1),
       color_exp_factor2_(-1.0 / params_->kValueSigma2)
 {

@@ -47,6 +47,17 @@ namespace precision_tracking
 /// Parameters for most of the tunable aspects of the precision tracker.
 struct Params
 {
+  /// @{ Tracker section
+
+  /// Whether to return the mean or mode of the distribution.  The mean
+  /// typically is more accurate because it accounts for the uncertainty
+  /// of the distribution, and because it can be computed at a finer resolution
+  /// than our sampling resolution.
+  bool useMean;
+
+  /// @}
+
+
   /// @{ ADH tracker section
 
   /// We compute the minimum sampling resolution based on the sensor
@@ -186,6 +197,10 @@ struct Params
 
   /// @{ Precision tracker section
 
+  /// Whether to use color - note that using color will make the tracker
+  /// very slow!
+  bool useColor;
+
   /// We downsample the current frame of the tracked object to have this many
   /// points.
   int kCurrFrameDownsample;
@@ -214,6 +229,9 @@ struct Params
   /// Defaults constructor assigns default values to each parameter
   Params()
   {
+    // Tracker section
+    useMean = true;
+
     // ADH tracker section
     kMinResFactor = 1;
     kDesiredSamplingResolution = 0.05;
@@ -255,6 +273,7 @@ struct Params
     kMotionMinProb = 1e-4;
 
     // Precision tracker section
+    useColor = false;
     kCurrFrameDownsample = 150;
     kPrevFrameDownsample = 2000;
     stochastic_downsample = false;

@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include <boost/math/constants/constants.hpp>
+#include <boost/make_shared.hpp>
 
 #include <precision_tracking/track_manager_color.h>
 #include <precision_tracking/tracker.h>
@@ -328,10 +329,10 @@ void testKalman(const precision_tracking::track_manager_color::TrackManagerColor
                 const string gt_folder) {
   printf("Tracking objects with the centroid-based Kalman filter baseline. "
          "This method is very fast but not very accurate. Please wait...\n");
-  const bool use_precision_tracker = false;
-  const bool use_color = false;
-  const bool use_mean = true;
-  precision_tracking::Tracker centroid_tracker(use_precision_tracker, use_color, use_mean, &params);
+  precision_tracking::Params _params = params;
+  params.useColor = false;
+  params.useMean = true;
+  precision_tracking::Tracker centroid_tracker(&_params);
   trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
 }
 
@@ -340,10 +341,12 @@ void testPrecisionTracker(
     const string gt_folder) {
   printf("\nTracking objects with our precision tracker. "
          "This method is accurate and fairly fast. Please wait...\n");
-  const bool use_precision_tracker = true;
-  const bool use_color = false;
-  const bool use_mean = true;
-  precision_tracking::Tracker precision_tracker(use_precision_tracker, use_color, use_mean, &params);
+  precision_tracking::Params _params = params;
+  params.useColor = false;
+  params.useMean = true;
+  precision_tracking::Tracker precision_tracker(&_params);
+  precision_tracker.setPrecisionTracker(
+      boost::make_shared<precision_tracking::PrecisionTracker>(&_params));
   trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
 }
 
@@ -352,10 +355,12 @@ void testPrecisionTrackerColor(
     const string gt_folder) {
   printf("\nTracking objects with our precision tracker using color. "
          "This method is a bit more accurate but much slower. Please wait (will be slow)...\n");
-  const bool use_precision_tracker = true;
-  const bool use_color = true;
-  const bool use_mean = true;
-  precision_tracking::Tracker precision_tracker_color(use_precision_tracker, use_color, use_mean, &params);
+  precision_tracking::Params _params = params;
+  params.useColor = true;
+  params.useMean = true;
+  precision_tracking::Tracker precision_tracker_color(&_params);
+  precision_tracker_color.setPrecisionTracker(
+      boost::make_shared<precision_tracking::PrecisionTracker>(&_params));
   trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
 }
 
