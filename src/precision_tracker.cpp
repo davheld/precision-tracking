@@ -10,7 +10,8 @@
 #include <pcl/common/centroid.h>
 
 #include <precision_tracking/down_sampler.h>
-#include <precision_tracking/density_grid_evaluator.h>
+#include <precision_tracking/density_grid_2d_evaluator.h>
+#include <precision_tracking/density_grid_3d_evaluator.h>
 #include <precision_tracking/lf_rgbd_6d_evaluator.h>
 #include <precision_tracking/precision_tracker.h>
 
@@ -31,8 +32,10 @@ PrecisionTracker::PrecisionTracker(const Params *params)
 {
   if (params_->useColor) {
     alignment_evaluator_.reset(new LF_RGBD_6D_Evaluator(params_));
+  } else if (params_->use3D){
+    alignment_evaluator_.reset(new DensityGrid3dEvaluator(params_));
   } else {
-    alignment_evaluator_.reset(new DensityGridEvaluator(params_));
+    alignment_evaluator_.reset(new DensityGrid2dEvaluator(params_));
   }
 }
 

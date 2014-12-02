@@ -201,6 +201,11 @@ struct Params
   /// very slow!
   bool useColor;
 
+  // Whether to track the full 3D point cloud or a 2D projection.  Tracking with
+  // the full 3D point cloud is more accurate but uses much more memory,
+  // due to our caching scheme.
+  bool use3D;
+
   /// We downsample the current frame of the tracked object to have this many
   /// points.
   int kCurrFrameDownsample;
@@ -274,6 +279,7 @@ struct Params
 
     // Precision tracker section
     useColor = false;
+    use3D = false;
     kCurrFrameDownsample = 150;
     kPrevFrameDownsample = 2000;
     stochastic_downsample = false;

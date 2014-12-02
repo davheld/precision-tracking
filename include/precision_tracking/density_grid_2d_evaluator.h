@@ -13,8 +13,8 @@
  *
  */
 
-#ifndef __PRECISION_TRACKING__DENSITY_GRID_EVALUATOR_H_
-#define __PRECISION_TRACKING__DENSITY_GRID_EVALUATOR_H_
+#ifndef __PRECISION_TRACKING__DENSITY_GRID_2D_EVALUATOR_H_
+#define __PRECISION_TRACKING__DENSITY_GRID_2D_EVALUATOR_H_
 
 #include <vector>
 
@@ -31,10 +31,10 @@ class MotionModel;
 
 namespace precision_tracking {
 
-class DensityGridEvaluator : public AlignmentEvaluator {
+class DensityGrid2dEvaluator : public AlignmentEvaluator {
 public:
-  DensityGridEvaluator(const Params *params);
-  virtual ~DensityGridEvaluator();
+  DensityGrid2dEvaluator(const Params *params);
+  virtual ~DensityGrid2dEvaluator();
 
 private:
   void init(const double xy_sampling_resolution,
@@ -53,25 +53,21 @@ private:
   void computeDensityGridParameters(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
       const double xy_sampling_resolution,
-      const double z_sampling_resolution,
-      const double xy_sensor_resolution,
-      const double z_sensor_resolution);
+      const double xy_sensor_resolution);
 
   // Pre-cache probability values in a density grid for fast lookups.
   void computeDensityGrid(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points);
 
   // A grid used to pre-cache probability values for fast lookups.
-  std::vector<std::vector<std::vector<double> >  > density_grid_;
+  std::vector<std::vector<double> > density_grid_;
 
   // The size of the resulting grid.
   int xSize_;
   int ySize_;
-  int zSize_;
 
   // The step size of the density grid.
   double xy_grid_step_;
-  double z_grid_step_;
 
   // The minimum point of the previous set of points used for tracking.
   pcl::PointXYZRGB min_pt_;
@@ -82,10 +78,9 @@ private:
   // so we only need to compute the probability at a limited number
   // of grid cells for each point.
   int num_spillover_steps_xy_;
-  int num_spillover_steps_z_;
 };
 
 } // namespace precision_tracking
 
-#endif /* __PRECISION_TRACKING__DENSITY_GRID_EVALUATOR_H_ */
+#endif /* __PRECISION_TRACKING__DENSITY_GRID_2D_EVALUATOR_H_ */
 

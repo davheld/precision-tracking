@@ -1,5 +1,5 @@
 /*
- * density_grid_tracker.cpp
+ * density_grid_3d_evaluator.cpp
  *
  *  Created on: Sep 1, 2013
  *      Author: davheld
@@ -11,7 +11,7 @@
 
 #include <pcl/common/common.h>
 
-#include <precision_tracking/density_grid_evaluator.h>
+#include <precision_tracking/density_grid_3d_evaluator.h>
 
 
 namespace precision_tracking {
@@ -27,7 +27,7 @@ using std::min;
 
 // Initialize the density grid to all have log(kSmoothingFactor), so we do
 // not give a probability of 0 to any location.
-DensityGridEvaluator::DensityGridEvaluator(const Params *params)
+DensityGrid3dEvaluator::DensityGrid3dEvaluator(const Params *params)
   : AlignmentEvaluator(params)
   , density_grid_(params_->kMaxXSize, vector<vector<double> >(
                     params_->kMaxYSize, vector<double>(
@@ -36,12 +36,12 @@ DensityGridEvaluator::DensityGridEvaluator(const Params *params)
 
 }
 
-DensityGridEvaluator::~DensityGridEvaluator()
+DensityGrid3dEvaluator::~DensityGrid3dEvaluator()
 {
 	// TODO Auto-generated destructor stub
 }
 
-void DensityGridEvaluator::init(const double xy_sampling_resolution,
+void DensityGrid3dEvaluator::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
           const double sensor_vertical_resolution,
@@ -58,7 +58,7 @@ void DensityGridEvaluator::init(const double xy_sampling_resolution,
   computeDensityGrid(prev_points_);
 }
 
-void DensityGridEvaluator::computeDensityGridParameters(
+void DensityGrid3dEvaluator::computeDensityGridParameters(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& prev_points,
     const double xy_sampling_resolution,
     const double z_sampling_resolution,
@@ -127,7 +127,7 @@ void DensityGridEvaluator::computeDensityGridParameters(
       max(1.0, ceil(params_->kSpilloverRadius * sigma_z_ / z_grid_step_ - 1));
 }
 
-void DensityGridEvaluator::computeDensityGrid(
+void DensityGrid3dEvaluator::computeDensityGrid(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points)
 {
   // Apply this offset when converting from the point location to the index.
@@ -262,7 +262,7 @@ void DensityGridEvaluator::computeDensityGrid(
   }
 }
 
-double DensityGridEvaluator::getLogProbability(
+double DensityGrid3dEvaluator::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& ,
     const MotionModel& motion_model,
