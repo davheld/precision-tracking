@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project(precision_tracking)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 
 find_package(Boost REQUIRED thread signals)
@@ -39,6 +39,7 @@ add_library (${PROJECT_NAME}
   src/high_res_timer.cpp
   src/alignment_evaluator.cpp
 
+  include/precision_tracking/params.h
   include/precision_tracking/track_manager_color.h
   include/precision_tracking/tracker.h
   include/precision_tracking/precision_tracker.h

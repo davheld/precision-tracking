@@ -28,39 +28,6 @@ namespace precision_tracking {
 
 namespace {
 
-// Approximation factor for finding the nearest neighbor.
-// Set to 0 to find the exact nearest neighbor.
-// For a reasonable speedup, set to 2.
-const double kSearchTreeEpsilon = 2;
-
-// -----Color Parameters----
-
-// Whether to use two colors in our measurement model.
-const bool kTwoColors = false;
-
-// The parameter to use for our color Laplacian for color 1.
-const double kValueSigma1 = 13.9;
-
-// The parameter to use for our color Laplacian for color 2.
-const double kValueSigma2 = 15.2;
-
-// How much we expect the colors to match (there might have been lens flare,
-// the lighting might have changed, etc. which would cause all the colors
-// to be completely wrong).
-const double kProbColorMatch = 0.05;
-
-// How much to care about color as a function of the particle sampling resolution.
-// When we are sampling sparsely, we do not expect the colors to align well.
-// Set to 0 to ignore this term.
-// If non-zero, we set prob_color_match_ = kProbColorMatch *
-//    exp(-pow(sampling_resolution, 2) / (2 * pow(kColorThreshFactor, 2));
-const double kColorThreshFactor = 1;
-
-// Which color space to use for our color matches.
-// 0: Use blue and green,
-// 1: Use (R + G + B) / 3.
-const int kColorSpace = 0;
-
 // --- Constants ---
 
 const double pi = boost::math::constants::pi<double>();
@@ -68,24 +35,27 @@ const double pi = boost::math::constants::pi<double>();
 } // namespace
 
 
-LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator(const double use_color)
-    : searchTree_(false),  //  //By setting sorted to false,
+LF_RGBD_6D_Evaluator::LF_RGBD_6D_Evaluator(const Params *params)
+    : AlignmentEvaluator(params),
+      searchTree_(false),  //  //By setting sorted to false,
                                 // the radiusSearch operations will be faster.
       max_nn_(1),
       nn_indices_(max_nn_),
       nn_sq_dists_(max_nn_),
-      use_color_(use_color),
-      color_exp_factor1_(-1.0 / kValueSigma1),
-      color_exp_factor2_(-1.0 / kValueSigma2)
+      use_color_(params->useColor),
+      color_exp_factor1_(-1.0 / params_->kValueSigma1),
+      color_exp_factor2_(-1.0 / params_->kValueSigma2)
 {
 }
 
-LF_RGBD_6D_Evaluator::~LF_RGBD_6D_Evaluator() {
+LF_RGBD_6D_Evaluator::~LF_RGBD_6D_Evaluator()
+{
   // TODO Auto-generated destructor stub
 }
 
 void LF_RGBD_6D_Evaluator::setPrevPoints(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points) {
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr prev_points)
+{
   AlignmentEvaluator::setPrevPoints(prev_points);
 
   // Set the input cloud for the search tree to the previous points for NN
@@ -93,14 +63,15 @@ void LF_RGBD_6D_Evaluator::setPrevPoints(
   searchTree_.setInputCloud(prev_points_);
 
   // Set search tree epsilon for a speedup.
-  searchTree_.setEpsilon(kSearchTreeEpsilon);
+  searchTree_.setEpsilon(params_->kSearchTreeEpsilon);
 }
 
 void LF_RGBD_6D_Evaluator::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
           const double sensor_vertical_resolution,
-          const size_t num_current_points) {
+          const size_t num_current_points)
+{
   AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
                            sensor_horizontal_resolution,
                            sensor_vertical_resolution,
@@ -113,11 +84,11 @@ void LF_RGBD_6D_Evaluator::init(const double xy_sampling_resolution,
   // Set the probability of seeing a color match, which is based on the
   // particle sampling resolution - when we are sampling sparsely, we do not
   // expect the colors to align well.
-  if (kColorThreshFactor == 0) {
-    prob_color_match_ = kProbColorMatch;
+  if (params_->kColorThreshFactor == 0) {
+    prob_color_match_ = params_->kProbColorMatch;
   } else {
-    prob_color_match_ = kProbColorMatch * exp(-pow(xy_sampling_resolution_, 2) /
-        (2 * pow(kColorThreshFactor, 2)));
+    prob_color_match_ = params_->kProbColorMatch * exp(-pow(xy_sampling_resolution_, 2) /
+        (2 * pow(params_->kColorThreshFactor, 2)));
   }
 }
 
@@ -130,7 +101,8 @@ void LF_RGBD_6D_Evaluator::score6DTransforms(
     const double sensor_vertical_resolution,
     const std::vector<Transform6D>& transforms,
     const MotionModel& motion_model,
-    ScoredTransforms<ScoredTransform6D>* scored_transforms) {
+    ScoredTransforms<ScoredTransform6D>* scored_transforms)
+{
   // Initialize variables for tracking grid.
   const size_t num_current_points = current_points->size();
   init(xy_sampling_resolution, z_sampling_resolution,
@@ -166,7 +138,8 @@ void LF_RGBD_6D_Evaluator::score6DTransforms(
 
 void LF_RGBD_6D_Evaluator::makeEigenRotation(
     const double roll, const double pitch, const double yaw,
-    Eigen::Quaternion<float>* rotation) const {
+    Eigen::Quaternion<float>* rotation) const
+{
   Eigen::AngleAxisf roll_angle(roll, Eigen::Vector3f::UnitZ());
   Eigen::AngleAxisf yaw_angle(yaw, Eigen::Vector3f::UnitY());
   Eigen::AngleAxisf pitch_angle(pitch, Eigen::Vector3f::UnitX());
@@ -178,7 +151,8 @@ void LF_RGBD_6D_Evaluator::makeEigenTransform(
     const Eigen::Vector3f& centroid,
     const double delta_x, const double delta_y, const double delta_z,
     const double roll, const double pitch, const double yaw,
-    Eigen::Affine3f* transform) const {
+    Eigen::Affine3f* transform) const
+{
   // We want to rotate the object about its own centroid (not about the
   // camera center), so we first subtract off the centroid, then rotate,
   // then add back the centroid.
@@ -206,7 +180,8 @@ double LF_RGBD_6D_Evaluator::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& current_points_centroid,
     const MotionModel& motion_model,
-    const double x, const double y, const double z) {
+    const double x, const double y, const double z)
+{
   // For a 3D transform, set the angular rotations to 0.
   const double roll = 0;
   const double pitch = 0;
@@ -225,7 +200,8 @@ double LF_RGBD_6D_Evaluator::getLogProbability(
     const double delta_z,
     const double roll,
     const double pitch,
-    const double yaw) {
+    const double yaw)
+{
   // Make a new cloud to store the transformed cloud for the current points.
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_current_points(
       new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -265,7 +241,8 @@ double LF_RGBD_6D_Evaluator::getLogProbability(
 }
 
 double LF_RGBD_6D_Evaluator::getPointProbability(
-    const pcl::PointXYZRGB& point) {
+    const pcl::PointXYZRGB& point)
+{
   // Get the distance to the tracked object.
   const double horizontal_distance = sqrt(pow(point.x, 2) + pow(point.y, 2));
 
@@ -296,7 +273,8 @@ double LF_RGBD_6D_Evaluator::getPointProbability(
   get_log_prob(point);
 }
 
-double LF_RGBD_6D_Evaluator::get_log_prob(const pcl::PointXYZRGB& current_pt) {
+double LF_RGBD_6D_Evaluator::get_log_prob(const pcl::PointXYZRGB& current_pt)
+{
   // Find the nearest neighbor.
   searchTree_.nearestKSearch(current_pt, max_nn_, nn_indices_, nn_sq_dists_);
   const pcl::PointXYZRGB& prev_pt = (*prev_points_)[nn_indices_[0]];
@@ -326,14 +304,15 @@ double LF_RGBD_6D_Evaluator::get_log_prob(const pcl::PointXYZRGB& current_pt) {
 }
 
 double LF_RGBD_6D_Evaluator::computeColorProb(const pcl::PointXYZRGB& prev_pt,
-    const pcl::PointXYZRGB& pt, const double point_match_prob_spatial_i) const {
+    const pcl::PointXYZRGB& pt, const double point_match_prob_spatial_i) const
+{
   // Because we are using color, we have to modify the smoothing factor.
   const double factor1 = smoothing_factor_ / (smoothing_factor_ + 1);
 
   double smoothing_factor;
-  if (use_color_ && !kTwoColors) {
+  if (use_color_ && !params_->kTwoColors) {
     smoothing_factor = factor1 / 255;
-  } else if (use_color_ && kTwoColors) {
+  } else if (use_color_ && params_->kTwoColors) {
     smoothing_factor = factor1 / pow(255, 2);
   } else {
     smoothing_factor = smoothing_factor_;
@@ -342,26 +321,26 @@ double LF_RGBD_6D_Evaluator::computeColorProb(const pcl::PointXYZRGB& prev_pt,
 
   // Find the colors of the 2 points.
   int color1 = 0, color2 = 0, color3 = 0, color4 = 0;
-  if (kColorSpace == 0) {
+  if (params_->kColorSpace == 0) {
     // Blue and Green.
     color1 = pt.b;
     color2 = prev_pt.b;
 
     color3 = pt.g;
     color4 = prev_pt.g;
-  } else if (kColorSpace == 1) {
+  } else if (params_->kColorSpace == 1) {
     // Mean of RGB.
     color1 = (pt.r + pt.g + pt.b) / 3;
     color2 = (prev_pt.r + prev_pt.g + prev_pt.b) / 3;
   } else {
-    printf("Unknown color space: %d\n", kColorSpace);
+    printf("Unknown color space: %d\n", params_->kColorSpace);
     exit(1);
   }
 
   // Compute the probability of the match, using the spatial and color distance.
   const double color_distance1 = fabs(color1 - color2);
   double point_match_prob;
-  if (kTwoColors) {
+  if (params_->kTwoColors) {
     const double color_distance2 = fabs(color3 - color4);
 
     point_match_prob =

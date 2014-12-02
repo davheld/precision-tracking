@@ -18,16 +18,6 @@ namespace precision_tracking {
 
 namespace {
 
-// How far to spill over in the density grid (number of sigmas).
-const double kSpilloverRadius = 2.0;
-
-// Total size = 3.7 GB
-// At a resolution of 1.2 cm, a 10 m wide object will take 1000 cells.
-const int kMaxXSize = 1000;
-const int kMaxYSize = 1000;
-// At a resolution of 1.2 cm, a 5 m tall object will take 500 cells.
-const int kMaxZSize = 500;
-
 using std::vector;
 using std::pair;
 using std::max;
@@ -37,12 +27,17 @@ using std::min;
 
 // Initialize the density grid to all have log(kSmoothingFactor), so we do
 // not give a probability of 0 to any location.
-DensityGridEvaluator::DensityGridEvaluator()
-  : density_grid_(kMaxXSize, vector<vector<double> >(
-        kMaxYSize, vector<double>(kMaxZSize, log(smoothing_factor_)))) {
+DensityGridEvaluator::DensityGridEvaluator(const Params *params)
+  : AlignmentEvaluator(params)
+  , density_grid_(params_->kMaxXSize, vector<vector<double> >(
+                    params_->kMaxYSize, vector<double>(
+                      params_->kMaxZSize, log(smoothing_factor_))))
+{
+
 }
 
-DensityGridEvaluator::~DensityGridEvaluator() {
+DensityGridEvaluator::~DensityGridEvaluator()
+{
 	// TODO Auto-generated destructor stub
 }
 
@@ -50,7 +45,8 @@ void DensityGridEvaluator::init(const double xy_sampling_resolution,
           const double z_sampling_resolution,
           const double sensor_horizontal_resolution,
           const double sensor_vertical_resolution,
-          const size_t num_current_points) {
+          const size_t num_current_points)
+{
   AlignmentEvaluator::init(xy_sampling_resolution, z_sampling_resolution,
                            sensor_horizontal_resolution,
                            sensor_vertical_resolution, num_current_points);
@@ -67,7 +63,8 @@ void DensityGridEvaluator::computeDensityGridParameters(
     const double xy_sampling_resolution,
     const double z_sampling_resolution,
     const double xy_sensor_resolution,
-    const double z_sensor_resolution) {
+    const double z_sensor_resolution)
+{
   // Get the appropriate size for the grid.
   xy_grid_step_ = xy_sampling_resolution;
 
@@ -103,11 +100,11 @@ void DensityGridEvaluator::computeDensityGridParameters(
   max_pt.z += 2 * z_grid_step_;
 
   // Find the appropriate size for the density grid.
-  xSize_ = min(kMaxXSize, max(1, static_cast<int>(
+  xSize_ = min(params_->kMaxXSize, max(1, static_cast<int>(
       ceil((max_pt.x - min_pt_.x) / xy_grid_step_))));
-  ySize_ = min(kMaxYSize, max(1, static_cast<int>(
+  ySize_ = min(params_->kMaxYSize, max(1, static_cast<int>(
       ceil((max_pt.y - min_pt_.y) / xy_grid_step_))));
-  zSize_ = min(kMaxZSize, max(1, static_cast<int>(
+  zSize_ = min(params_->kMaxZSize, max(1, static_cast<int>(
       ceil((max_pt.z - min_pt_.z) / z_grid_step_))));
 
   // Reset the density grid to the default value.
@@ -123,15 +120,16 @@ void DensityGridEvaluator::computeDensityGridParameters(
   // In our discrete grid, we want to compute the Gaussian for a certian
   // number of grid cells away from the point.
   num_spillover_steps_xy_ =
-      ceil(kSpilloverRadius * sigma_xy_ / xy_grid_step_ - 1);
+      ceil(params_->kSpilloverRadius * sigma_xy_ / xy_grid_step_ - 1);
   // Our implementation requires that we spill over at least 1 cell in the
   // z direction.
   num_spillover_steps_z_ =
-      max(1.0, ceil(kSpilloverRadius * sigma_z_ / z_grid_step_ - 1));
+      max(1.0, ceil(params_->kSpilloverRadius * sigma_z_ / z_grid_step_ - 1));
 }
 
 void DensityGridEvaluator::computeDensityGrid(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points) {
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points)
+{
   // Apply this offset when converting from the point location to the index.
   const double x_offset = -min_pt_.x / xy_grid_step_;
   const double y_offset = -min_pt_.y / xy_grid_step_;
@@ -268,7 +266,8 @@ double DensityGridEvaluator::getLogProbability(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
     const Eigen::Vector3f& ,
     const MotionModel& motion_model,
-    const double delta_x, const double delta_y, const double delta_z) {
+    const double delta_x, const double delta_y, const double delta_z)
+{
   // Amount of total log probability density for the given alignment.
   double total_log_density = 0;
 

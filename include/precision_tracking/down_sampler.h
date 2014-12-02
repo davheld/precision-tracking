@@ -10,12 +10,13 @@
 
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <precision_tracking/params.h>
 
 namespace precision_tracking {
 
 class DownSampler {
 public:
-  DownSampler(const bool stochastic);
+  DownSampler(const bool stochastic, const Params *params);
   virtual ~DownSampler();
 
   void downSamplePoints(
@@ -35,9 +36,11 @@ public:
   static void downSamplePointsDeterministic(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& points,
       const int targetNumPoints,
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr& downSampledPoints,
+      const bool use_ceil);
 
 private:
+  const Params *params_;
   bool stochastic_;
 };
 

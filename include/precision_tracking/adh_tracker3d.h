@@ -23,12 +23,13 @@
 #include <precision_tracking/alignment_evaluator.h>
 #include <precision_tracking/motion_model.h>
 #include <precision_tracking/scored_transform.h>
+#include <precision_tracking/params.h>
 
 namespace precision_tracking {
 
 class ADHTracker3d {
 public:
-  ADHTracker3d();
+  explicit ADHTracker3d(const Params *params);
   virtual ~ADHTracker3d();
 
   // Estimate the posterior distribution over alignments sampled from the
@@ -49,6 +50,8 @@ public:
       ScoredTransforms<ScoredTransformXYZ>* scored_transforms) const;
 
 private:
+  const Params *params_;
+
   // Compute the joint probability of each cell and the region, given
   // the prior region probability.
 	void recomputeProbs(
