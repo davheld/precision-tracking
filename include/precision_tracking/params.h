@@ -255,8 +255,8 @@ struct Params
     // Density grid evaluator section
     kSpilloverRadius = 2.0;
     kMaxXSize = 1000; // Total size = 3.7 GB
-    kMaxYSize = 1000; // At a resolution of 1.2 cm, a 10 m wide object will take 1000 cells
-    kMaxZSize = 500;  // At a resolution of 1.2 cm, a 5 m tall object will take 500 cells.
+    kMaxYSize = 1000; // At a resolution of 3.7 cm, a 10 m wide object will take 270 cells
+    kMaxZSize = 500;  // At a resolution of 3.7 cm, a 5 m tall object will take 135 cells.
 
     // down sampler section
     kUseCeil = true;
