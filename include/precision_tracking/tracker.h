@@ -49,8 +49,8 @@ public:
     return *motion_model_;
   }
 
-  void setPrecisionTracker(boost::shared_ptr<PrecisionTracker> e) {
-    precision_tracker_ = e;
+  void setPrecisionTracker(boost::shared_ptr<PrecisionTracker> precision_tracker) {
+    precision_tracker_ = precision_tracker;
   }
 
 private:

@@ -21,8 +21,6 @@ namespace precision_tracking {
 
 class PrecisionTracker {
 public:
-  /// Default constructor - does not use color. This is slightly less
-  /// accurate but much faster than the version with color.
   explicit PrecisionTracker(const Params *params);
 
   virtual ~PrecisionTracker();

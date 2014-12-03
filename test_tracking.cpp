@@ -22,8 +22,6 @@ namespace {
 
 const double pi = boost::math::constants::pi<double>();
 
-precision_tracking::Params params;
-
 } // namespace
 
 // Structure for storing estimated velocities for each track.
@@ -329,10 +327,8 @@ void testKalman(const precision_tracking::track_manager_color::TrackManagerColor
                 const string gt_folder) {
   printf("Tracking objects with the centroid-based Kalman filter baseline. "
          "This method is very fast but not very accurate. Please wait...\n");
-  precision_tracking::Params _params = params;
-  params.useColor = false;
-  params.useMean = true;
-  precision_tracking::Tracker centroid_tracker(&_params);
+  precision_tracking::Params params;
+  precision_tracking::Tracker centroid_tracker(&params);
   trackAndEvaluate(&centroid_tracker, track_manager, gt_folder);
 }
 
@@ -341,12 +337,10 @@ void testPrecisionTracker(
     const string gt_folder) {
   printf("\nTracking objects with our precision tracker. "
          "This method is accurate and fairly fast. Please wait...\n");
-  precision_tracking::Params _params = params;
-  params.useColor = false;
-  params.useMean = true;
-  precision_tracking::Tracker precision_tracker(&_params);
+  precision_tracking::Params params;
+  precision_tracking::Tracker precision_tracker(&params);
   precision_tracker.setPrecisionTracker(
-      boost::make_shared<precision_tracking::PrecisionTracker>(&_params));
+      boost::make_shared<precision_tracking::PrecisionTracker>(&params));
   trackAndEvaluate(&precision_tracker, track_manager, gt_folder);
 }
 
@@ -355,12 +349,11 @@ void testPrecisionTrackerColor(
     const string gt_folder) {
   printf("\nTracking objects with our precision tracker using color. "
          "This method is a bit more accurate but much slower. Please wait (will be slow)...\n");
-  precision_tracking::Params _params = params;
+  precision_tracking::Params params;
   params.useColor = true;
-  params.useMean = true;
-  precision_tracking::Tracker precision_tracker_color(&_params);
+  precision_tracking::Tracker precision_tracker_color(&params);
   precision_tracker_color.setPrecisionTracker(
-      boost::make_shared<precision_tracking::PrecisionTracker>(&_params));
+      boost::make_shared<precision_tracking::PrecisionTracker>(&params));
   trackAndEvaluate(&precision_tracker_color, track_manager, gt_folder);
 }
 
