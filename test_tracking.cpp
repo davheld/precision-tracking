@@ -419,20 +419,20 @@ int main(int argc, char **argv)
 
   // Testing the centroid-based Kalman filter baseline method - should be
   // very fast but not very accurate.
-  //testKalman(track_manager, gt_folder);
+  testKalman(track_manager, gt_folder);
 
   // Testing our precision tracker - should be very accurate and quite fast.
-  //testPrecisionTracker2D(track_manager, gt_folder);
+  testPrecisionTracker2D(track_manager, gt_folder);
 
   // Testing our precision tracker - should be very accurate and quite fast.
   testPrecisionTracker2DParallel(track_manager, gt_folder);
 
   // Testing our precision tracker - should be very accurate and quite fast.
-  //testPrecisionTracker3D(track_manager, gt_folder);
+  testPrecisionTracker3D(track_manager, gt_folder);
 
   // Testing our precision tracker with color - should be even more accurate
   // but slow.
-  //testPrecisionTrackerColor(track_manager, gt_folder);
+  testPrecisionTrackerColor(track_manager, gt_folder);
 
   return 0;
 }
