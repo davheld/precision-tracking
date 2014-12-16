@@ -52,23 +52,23 @@ void Tracker::addPoints(
     motion_model_->propagate(timestamp_diff);
 
     // Always align the smaller points to the bigger points.
-    const bool flip = current_points->size() > previousModel_->size();
+    const bool flip = previousModel_->size() > current_points->size();
 
     if (precision_tracker_) {
       // Align.
       ScoredTransforms<ScoredTransformXYZ> scored_transforms;
       if (!flip) {
           motion_model_->setFlip(false);
-          // Current points are smaller - align current points to previous.
+          // Previous points are smaller - align previous points to current.
           precision_tracker_->track(
-                current_points, previousModel_, sensor_horizontal_resolution,
+                previousModel_, current_points, sensor_horizontal_resolution,
                 sensor_vertical_resolution, *motion_model_, &scored_transforms);
       } else {
           motion_model_->setFlip(true);
 
-          // Previous points are smaller - align previous points to current.
+          // Current points are smaller - align current points to previous.
           precision_tracker_->track(
-                previousModel_, current_points, sensor_horizontal_resolution,
+                current_points, previousModel_, sensor_horizontal_resolution,
                 sensor_vertical_resolution, *motion_model_, &scored_transforms);
       }
 
@@ -95,7 +95,7 @@ void Tracker::addPoints(
       Eigen::Vector4f old_centroid;
       pcl::compute3DCentroid (*previousModel_, old_centroid);
 
-      const Eigen::Vector4f& centroidDiff =  old_centroid - new_centroid;
+      const Eigen::Vector4f& centroidDiff =  new_centroid - old_centroid;
 
       motion_model_->addCentroidDiff(centroidDiff, timestamp_diff);
 
