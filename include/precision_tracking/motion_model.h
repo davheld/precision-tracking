@@ -96,9 +96,6 @@ private:
   double pdf_constant_;
 	double min_score_;
 
-	bool valid_eigen_vectors_;
-	Eigen::Matrix3d eigen_vectors_;
-
 	//R_t in the kalman filter - the amount of uncertainty propagation in 0.1 s
 	Eigen::Matrix3d covariance_propagation_uncertainty_;
 

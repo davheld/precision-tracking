@@ -87,7 +87,7 @@ void LF_RGBD_6D_Evaluator::init(const double xy_sampling_resolution,
   if (params_->kColorThreshFactor == 0) {
     prob_color_match_ = params_->kProbColorMatch;
   } else {
-    prob_color_match_ = params_->kProbColorMatch * exp(-pow(xy_sampling_resolution_, 2) /
+    prob_color_match_ = params_->kProbColorMatch * exp(-pow(sampling_resolution, 2) /
         (2 * pow(params_->kColorThreshFactor, 2)));
   }
 }
