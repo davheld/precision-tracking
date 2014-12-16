@@ -230,8 +230,9 @@ void ADHTracker3d::createCandidateXYZTransforms(
 
   if (z_sampling_resolution == 0) {
     if (zRange_orig.first != zRange_orig.second) {
-      printf("Error - z_sampling_resolution = 0 but the z range"
-             "is %lf to %lf\n", zRange_orig.first, zRange_orig.second);
+      printf("Error - z_sampling_resolution = 0 but the z range "
+             "is %lf to %lf.  You need to set kInitialZSamplingResolution > 0\n",
+             zRange_orig.first, zRange_orig.second);
     }
 
     // Since our z sampling resolution is 0, set the z value for all samples.
