@@ -1,23 +1,23 @@
 #include <precision_tracking/high_res_timer.h>
 
-#define HRTCLOCK CLOCK_PROCESS_CPUTIME_ID
-
 namespace precision_tracking {
 
-HighResTimer::HighResTimer(const std::string& description) :
-  description_(description),
-  total_us_(0)
+HighResTimer::HighResTimer(const std::string& description,
+                           const clockid_t& clock)
+  : description_(description),
+    total_us_(0),
+    clock_(clock)
 {
 }
 
 void HighResTimer::start()
 {
-  clock_gettime(HRTCLOCK, &start_);
+  clock_gettime(clock_, &start_);
 }
 
 void HighResTimer::stop()
 {
-  clock_gettime(HRTCLOCK, &end_);
+  clock_gettime(clock_, &end_);
   total_us_ += 1e6 * (end_.tv_sec - start_.tv_sec) + 1e-3 * (end_.tv_nsec - start_.tv_nsec);
 }
 
