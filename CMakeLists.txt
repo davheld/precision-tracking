@@ -34,6 +34,7 @@ add_library (precision_tracker
   src/lf_rgbd_6d_evaluator.cpp
   src/high_res_timer.cpp
   src/alignment_evaluator.cpp
+  src/sensor_specs.cpp
 
   include/precision_tracking/track_manager_color.h
   include/precision_tracking/tracker.h
@@ -47,7 +48,8 @@ add_library (precision_tracker
   include/precision_tracking/lf_rgbd_6d_evaluator.h
   include/precision_tracking/high_res_timer.h
   include/precision_tracking/params.h
-  include/precision_tracking/alignment_evaluator.h)
+  include/precision_tracking/alignment_evaluator.h
+  include/precision_tracking/sensor_specs.h)
 
 add_executable (test_tracking test_tracking.cpp)
 target_link_libraries (test_tracking ${PCL_LIBRARIES} precision_tracker)
