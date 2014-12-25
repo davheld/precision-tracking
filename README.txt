@@ -1,29 +1,53 @@
-1) Prerequisites:
+CONTENTS
+--------
+   
+ * Introduction
+ * Requirements
+ * Installation
+ * Configuration
+ * Maintainers
+ * License
 
-1A) Install PCL:
+INTRODUCTION
+------------
+Our tracker takes as input 2 segmented point clouds and combines 3D shape, color (when available), and motion cues to accurately estimate the velocity of each object in real-time.  For more information, see our project page:
+http://stanford.edu/~davheld/anytime_tracking.html
+
+REQUIREMENTS
+------------
+To run the tracker, make sure you have installed PCL and CMake.
+
+To install PCL, see:
 http://pointclouds.org/downloads/
 
-1B) Install CMake:
-
-In Ubuntu, type:
+To install CMake on Ubuntu, type:
 sudo apt-get install cmake
 
-Other platforms:
-Install CMake from the binary appropriate for your OS:
+To install CMake on other platforms, see:
 http://www.cmake.org/cmake/resources/software.html
 
-2) Install the tracker repository:
+INSTALLATION
+------------
+
+Install the tracker repository:
 
 git clone ... .
-
-3) Run the tracker:
 
 mkdir build
 cd build
 cmake ..
 make
+
+Run the tracker:
+
 ./test_tracking ../testColor.tm ../gtFolder
 
+CONFIGURATION
+-------------
+
+
+USAGE
+-----
 4) Using the tracker in your own project
 
 At the top of your file, add:
@@ -70,3 +94,11 @@ follows (taken from test_tracking.cpp):
   const double velodyne_vertical_res =
       2 * horizontal_distance *
       tan(velodyne_vertical_angular_res / 2.0 * pi / 180.0);
+
+MAINTAINERS
+-----------
+
+
+LICENSE
+-------
+
