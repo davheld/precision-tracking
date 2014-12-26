@@ -1,5 +1,5 @@
 STANFORD ACADEMIC SOFTWARE LICENSE FOR 
-Stanford Docket S14-219 “ “Robust Anytime Tracking Combining 3D Shape, Color, and Motion with Annealed Dynamic Histograms”
+Stanford Docket S14-219 “Robust Anytime Tracking Combining 3D Shape, Color, and Motion with Annealed Dynamic Histograms”
 
 Stanford has an assignment to “Robust Anytime Tracking Combining 3D Shape, Color, and Motion with Annealed Dynamic Histograms” which was developed in the laboratories of Professors Sebastian Thrun and Silvio Savarese, and is described in Stanford Docket S14-219 and provisional patent 62/009,238 filed June 8, 2014.
 

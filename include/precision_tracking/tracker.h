@@ -25,6 +25,16 @@ public:
 
   void clear();
 
+  // Estimates the velocity of an object.  Call this function each
+  // time the object is observed.
+  void addPoints(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+      const double current_timestamp,
+      const double sensor_horizontal_resolution,
+      const double sensor_vertical_resolution,
+      Eigen::Vector3f* estimated_velocity);
+
+  // Same as above, but also returns the maximum alignment probability.
   void addPoints(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
       const double timestamp,

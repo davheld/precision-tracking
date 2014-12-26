@@ -32,6 +32,20 @@ void Tracker::addPoints(
     const double current_timestamp,
     const double sensor_horizontal_resolution,
     const double sensor_vertical_resolution,
+    Eigen::Vector3f* estimated_velocity)
+{
+    double alignment_probability;
+    addPoints(current_points, current_timestamp, sensor_horizontal_resolution,
+              sensor_vertical_resolution, estimated_velocity,
+              &alignment_probability);
+}
+
+
+void Tracker::addPoints(
+    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr& current_points,
+    const double current_timestamp,
+    const double sensor_horizontal_resolution,
+    const double sensor_vertical_resolution,
     Eigen::Vector3f* estimated_velocity,
     double* alignment_probability)
 {

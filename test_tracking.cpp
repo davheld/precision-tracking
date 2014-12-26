@@ -271,12 +271,10 @@ void track(
 
       // Track object.
       Eigen::Vector3f estimated_velocity;
-      double alignment_probability;
       tracker.addPoints(frame->cloud_, frame->timestamp_,
                          sensor_horizontal_resolution,
                          sensor_vertical_resolution,
-                         &estimated_velocity,
-                         &alignment_probability);
+                         &estimated_velocity);
 
       // The first time we see this object, we don't have a velocity yet.
       // After the first time, save the estimated velocity.
