@@ -50,12 +50,12 @@ cmake ..
 make
 
 To test the tracker is working, you first need to download some test data.  You can do this by running:
-wget http://stanford.edu/~davheld/DavidHeld_files/testColor.tm
+wget http://stanford.edu/~davheld/DavidHeld_files/test.tm
 
 Now to test the tracker, run:
 
 cd build
-./test_tracking ../testColor.tm ../gtFolder
+./test_tracking ../test.tm ../gtFolder
 
 This will run a test script which will run 5 different versions of the tracker on the test data.  Each version has a different speed / accuracy tradeoff, as explained in the print statements that will appear on your screen.
 
