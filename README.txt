@@ -29,7 +29,7 @@ http://www.cmake.org/cmake/resources/software.html
 
 INSTALLATION
 ------------
-First get the tracker repository from github.  
+First get the tracker repository from github:  
 
 git clone https://github.com/davheld/precision-tracking.git
 
