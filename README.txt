@@ -59,7 +59,7 @@ The tracker is currently configured assuming that you are recording data with th
 
 First, in params.h, you will need to change the parameter kMinMeasurementVariance to be equal to the average sensor noise, in meters.  For the HDL-64E Velodyne Lidar, the sensor noise is usually less than 3 cm, so this value is set to 0.03.
 
-Next, you will need to compute the horizontal and vertical sensor resolution of your sensor as a function of the distance to each tracked object.  For the HDL-64E Velodyne Lidar, there is a function getSensorResolution(...) in sensor_specs.cpp which performs this calculation.  You can add a function that performs a similar calculation based on the resolution of your sensor.
+Next, you will need to compute the horizontal and vertical sensor resolution of your sensor as a function of the distance to each tracked object.  For the HDL-64E Velodyne Lidar, there is a function getSensorResolution in sensor_specs.cpp which performs this calculation.  You can add a function that performs a similar calculation based on the resolution of your sensor.
 
 After that, you should be all set to start precisely estimating object velocities!
 
