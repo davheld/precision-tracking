@@ -51,13 +51,7 @@ cd build
 
 This will execute a test script which will run 5 different versions of the tracker on the test data.  Each version has a different speed / accuracy tradeoff, as explained in the print statements that will appear on your screen.
 
-If you are using ROS, then you can also downlaod a ROS-compatible version of the tracker by running:
-
-git clone https://github.com/davheld/precision-tracking.git --branch ros-hydro
-
-Further instructions on using ROS can be found at 
-
-http://wiki.ros.org/
+If you are using ROS, then you can use CMakeLists.txt.ros (just rename this as CMakeLists.txt) and package.xml to compile the tracker.
 
 CONFIGURATION
 -------------
