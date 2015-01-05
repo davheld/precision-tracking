@@ -5,6 +5,7 @@ CONTENTS
  * Requirements
  * Installation
  * Configuration
+ * Usage
  * Maintainers
  * License
  * Citations
@@ -86,9 +87,9 @@ where:
 points = the currently observed points for the object that you wish to track
 timestamp = the time that these points were observed
 sensor_horizontal_resolution = the horizontal resolution of the sensor
-  for an object at distance observed
+  at the distance of the tracked object
 sensor_vertical_resolution = the vertical resolution of the sensor
-  for an object at distance observed
+  at the distance of the tracked object
 estimated_velocity = the returned estimated translational velocity.  The tracker
   only outputs the estimated horizontal velocity - vertical motion and
   rotation are not currently estimated.  The velocity estimate is 0 for the
