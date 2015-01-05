@@ -1,3 +1,12 @@
+/*
+ * sensor_specs.h
+ *
+ *      Author: davheld
+ *
+ * Functions specific to the sensor being used to collect 3D point cloud data.
+ *
+ */
+
 #ifndef SENSOR_SPECS_H
 #define SENSOR_SPECS_H
 

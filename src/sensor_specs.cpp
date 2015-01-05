@@ -1,3 +1,10 @@
+/*
+ * sensor_specs.cpp
+ *
+ *      Author: davheld
+ *
+ */
+
 #include "precision_tracking/sensor_specs.h"
 
 #include <cmath>
