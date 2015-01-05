@@ -3,6 +3,10 @@
  *
  *  Created on: Jan 23, 2013
  *      Author: davheld
+ *
+ * Motion model used to predict the next location of a given object,
+ * given a previously estimated motion.
+ *
  */
 
 #ifndef __PRECISION_TRACKING__MOTION_MODEL_H_

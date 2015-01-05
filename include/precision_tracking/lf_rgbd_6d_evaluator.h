@@ -1,4 +1,6 @@
 /*
+ * lf_rgbd_6d_evaluator.h
+ *
  *  Created on: May 1, 2014
  *      Author: davheld
  *
@@ -10,6 +12,7 @@
  *
  * Parameters are taken based on the latent surface model from RSS 2014,
  * Held, et al.
+ *
  */
 
 #ifndef __PRECISION_TRACKING__LF_RGBD_6D_EVALUATOR_H_

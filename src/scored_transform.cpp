@@ -1,8 +1,9 @@
 /*
- * ScoredTransform.cpp
+ * scored_transform.cpp
  *
  *  Created on: Sep 17, 2013
  *      Author: davheld
+ *
  */
 
 #include <precision_tracking/scored_transform.h>

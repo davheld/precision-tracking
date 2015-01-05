@@ -3,6 +3,10 @@
  *
  *  Created on: Nov 20, 2011
  *      Author: davheld
+ *
+ * Main class for tracking; updates the object's motion model and calls
+ * the appropriate tracker (precision tracker or otherwise).
+ *
  */
 
 #ifndef __PRECISION_TRACKING__TRACKER_H_

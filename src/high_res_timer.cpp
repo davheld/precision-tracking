@@ -1,3 +1,11 @@
+/*
+ * high_res_timer.cpp
+ *
+ *      Author: Alex Teichman
+ *
+ */
+
+
 #include <precision_tracking/high_res_timer.h>
 
 namespace precision_tracking {

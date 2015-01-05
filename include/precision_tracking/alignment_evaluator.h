@@ -1,10 +1,13 @@
 /*
-*  Created on: Aug 18, 2014
-*      Author: davheld
-*
-* Base class for evaluating the probability of different alignments between
-* points in the previous and the current frames.
-*/
+ * alignment_evaluator.h
+ *
+ *  Created on: Aug 18, 2014
+ *      Author: davheld
+ *
+ * Base class for evaluating the probability of different alignments between
+ * points in the previous and the current frames.
+ *
+ */
 
 #ifndef __PRECISION_TRACKING__ALIGNMENT_EVALUATOR_H
 #define __PRECISION_TRACKING__ALIGNMENT_EVALUATOR_H

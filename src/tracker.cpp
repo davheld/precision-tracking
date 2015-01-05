@@ -3,8 +3,8 @@
  *
  *  Created on: Nov 20, 2011
  *      Author: davheld
+ *
  */
-
 
 #include <pcl/common/centroid.h>
 

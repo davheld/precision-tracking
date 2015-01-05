@@ -1,3 +1,10 @@
+/*
+ * track_manager_color.cpp
+ *
+ *      Author: Alex Teichman
+ *
+ */
+
 #include <vector>
 
 #include <pcl/conversions.h>

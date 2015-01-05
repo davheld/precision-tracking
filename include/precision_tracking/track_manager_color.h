@@ -1,3 +1,12 @@
+/*
+ * track_manager_color.h
+ *
+ *      Author: Alex Teichman
+ *
+ * I/O functionality for reading/writing a sequence of point clouds to disk.
+ *
+ */
+
 #ifndef __PRECISION_TRACKING__TRACK_MANAGER_COLOR_H
 #define __PRECISION_TRACKING__TRACK_MANAGER_COLOR_H
 

@@ -3,6 +3,9 @@
  *
  *  Created on: May 12, 2014
  *      Author: davheld
+ *
+ * Main class for performing the precision tracking.
+ *
  */
 
 #ifndef __PRECISION_TRACKING__PRECISION_TRACKER_H_

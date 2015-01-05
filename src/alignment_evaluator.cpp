@@ -1,7 +1,10 @@
 /*
-*  Created on: Aug 18, 2014
-*      Author: davheld
-*/
+ * alignment_evaluator.cpp
+ *
+ *  Created on: Aug 18, 2014
+ *      Author: davheld
+ *
+ */
 
 #include <precision_tracking/alignment_evaluator.h>
 

@@ -3,6 +3,9 @@
  *
  *  Created on: Sep 17, 2013
  *      Author: davheld
+ *
+ * Classes representing point cloud transforms and associated metadata.
+ *
  */
 
 #ifndef __PRECISION_TRACKING__SCORED_TRANSFORM_H_

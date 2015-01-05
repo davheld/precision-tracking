@@ -3,6 +3,9 @@
  *
  *  Created on: May 12, 2014
  *      Author: davheld
+ *
+ * Different methods for down-sampling a point cloud.
+ *
  */
 
 #ifndef __PRECISION_TRACKING__DOWN_SAMPLER_H_

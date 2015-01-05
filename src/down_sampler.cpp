@@ -3,6 +3,7 @@
  *
  *  Created on: May 12, 2014
  *      Author: davheld
+ *
  */
 
 #include <precision_tracking/down_sampler.h>

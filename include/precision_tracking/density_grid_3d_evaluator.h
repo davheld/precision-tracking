@@ -1,5 +1,5 @@
 /*
- * density_grid_evaluator.h
+ * density_grid_3d_evaluator.h
  *
  *  Created on: Sep 1, 2013
  *      Author: davheld
