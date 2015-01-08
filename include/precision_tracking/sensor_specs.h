@@ -7,8 +7,8 @@
  *
  */
 
-#ifndef SENSOR_SPECS_H
-#define SENSOR_SPECS_H
+#ifndef __PRECISION_TRACKING__SENSOR_SPECS_H
+#define __PRECISION_TRACKING__SENSOR_SPECS_H
 
 #include <Eigen/Eigen>
 
@@ -19,4 +19,4 @@ void getSensorResolution(const Eigen::Vector3f& centroid_local_coordinates,
                          double* sensor_vertical_res);
 } // namespace precision_tracking
 
-#endif // SENSOR_SPECS_H
+#endif // __PRECISION_TRACKING__SENSOR_SPECS_H
