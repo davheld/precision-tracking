@@ -107,7 +107,9 @@ For questions about the tracker, contact David Held: davheld@cs.stanford.edu
 
 LICENSE
 -------
-The tracker comes with an academic license for non-commercial purposes.  For a commercial license to this software, please contact the Stanford Office of Technology and Licensing at info@otlmail.stanford.edu.
+The tracker comes with an academic license for non-commercial purposes.  
+For a commercial license to this software, please contact the 
+Stanford Office of Technology and Licensing at info@otlmail.stanford.edu and mention the docket 14-219.
 
 CITATIONS
 ---------
