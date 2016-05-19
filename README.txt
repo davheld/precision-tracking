@@ -43,7 +43,7 @@ make
 
 To test the tracker is working, you first need to download some test data.  You can do this by running:
 cd ..
-wget http://stanford.edu/~davheld/DavidHeld_files/test.tm 
+wget http://cs.stanford.edu/people/davheld/public/test.tm
 
 Now to test that the tracker is working, run:
 
